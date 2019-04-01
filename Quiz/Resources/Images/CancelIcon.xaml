@@ -1,0 +1,9 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Geometry x:Key="CloseGeometry1">F1 M52,52z M0,0z M26,0C11.664,0 0,11.663 0,26 0,40.337 11.664,52 26,52 40.336,52 52,40.337 52,26 52,11.663 40.336,0 26,0z M26,50C12.767,50 2,39.233 2,26 2,12.767 12.767,2 26,2 39.233,2 50,12.767 50,26 50,39.233 39.233,50 26,50z</Geometry>
+    <Geometry x:Key="CloseGeometry2">F1 M52,52z M0,0z M35.707,16.293C35.316,15.902,34.684,15.902,34.293,16.293L26,24.586 17.707,16.293C17.316,15.902 16.684,15.902 16.293,16.293 15.902,16.684 15.902,17.316 16.293,17.707L24.586,26 16.293,34.293C15.902,34.684 15.902,35.316 16.293,35.707 16.488,35.902 16.744,36 17,36 17.256,36 17.512,35.902 17.707,35.707L26,27.414 34.293,35.707C34.488,35.902 34.744,36 35,36 35.256,36 35.512,35.902 35.707,35.707 36.098,35.316 36.098,34.684 35.707,34.293L27.414,26 35.707,17.707C36.098,17.316,36.098,16.684,35.707,16.293z</Geometry>
+    <DrawingGroup x:Key="CloseDrawingGroup" ClipGeometry="M0,0 V52 H52 V0 H0 Z">
+        <GeometryDrawing Brush="#FFFCFFF5" Geometry="{StaticResource CloseGeometry1}" />
+        <GeometryDrawing Brush="#FFFCFFF5" Geometry="{StaticResource CloseGeometry2}" />
+    </DrawingGroup>
+    <DrawingImage x:Key="CloseButtonIcon" Drawing="{StaticResource CloseDrawingGroup}" />
+</ResourceDictionary>

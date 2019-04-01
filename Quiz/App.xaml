@@ -1,0 +1,19 @@
+﻿<Application x:Class="Quiz.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Quiz"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary x:Name="Close" Source="Resources/Images/CancelIcon.xaml"/>
+                <ResourceDictionary x:Name="MinimizeIcon" Source="Resources/Images/MinimizeIcon.xaml"/>
+
+                <ResourceDictionary x:Name="AddPlayer" Source="Resources/Images/AddPlayer.xaml" />
+                <ResourceDictionary x:Name="WiFi" Source="Resources/Images/WiFi.xaml" />
+
+
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

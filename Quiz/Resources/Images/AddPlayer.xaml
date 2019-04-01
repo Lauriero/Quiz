@@ -1,0 +1,11 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Geometry x:Key="AddButtonGeometry1">F1 M52,52z M0,0z M26,0C11.664,0 0,11.663 0,26 0,40.337 11.664,52 26,52 40.336,52 52,40.337 52,26 52,11.663 40.336,0 26,0z M26,50C12.767,50 2,39.233 2,26 2,12.767 12.767,2 26,2 39.233,2 50,12.767 50,26 50,39.233 39.233,50 26,50z</Geometry>
+  <Geometry x:Key="AddButtonGeometry2">F1 M52,52z M0,0z M38.5,25L27,25 27,14C27,13.447 26.552,13 26,13 25.448,13 25,13.447 25,14L25,25 13.5,25C12.948,25 12.5,25.447 12.5,26 12.5,26.553 12.948,27 13.5,27L25,27 25,39C25,39.553 25.448,40 26,40 26.552,40 27,39.553 27,39L27,27 38.5,27C39.052,27 39.5,26.553 39.5,26 39.5,25.447 39.052,25 38.5,25z</Geometry>
+  <DrawingGroup x:Key="AddButtonDrawingGroup" ClipGeometry="M0,0 V52 H52 V0 H0 Z">
+    <DrawingGroup>
+      <GeometryDrawing Brush="#FFFFFFFF" Geometry="{StaticResource AddButtonGeometry1}" />
+      <GeometryDrawing Brush="#FFFFFFFF" Geometry="{StaticResource AddButtonGeometry2}" />
+    </DrawingGroup>
+  </DrawingGroup>
+  <DrawingImage x:Key="AddButtonDrawingImage" Drawing="{StaticResource AddButtonDrawingGroup}" />
+</ResourceDictionary>
