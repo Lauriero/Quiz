@@ -67,7 +67,8 @@
     <Compile Include="Support\DataModels\Answer.cs" />
     <Compile Include="Support\DataModels\Player.cs" />
     <Compile Include="Support\DataModels\Question.cs" />
-    <Compile Include="Support\ModuleWorker.cs" />
+    <Compile Include="Support\ButtonModuleConnector.cs" />
+    <Compile Include="Support\RegisterManager.cs" />
     <Compile Include="Support\WiFiWorker.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -94,6 +95,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Resources\Images\WiFi.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Resources\Images\WiFiDisconnected.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

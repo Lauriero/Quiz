@@ -37,8 +37,7 @@ namespace Quiz
         public double PlayerBarHeight
         {
             get { return _playerBarHeight; }
-            set
-            {
+            set {
                 _playerBarHeight = value;
                 OnPropertyChanged("PlayerBarHeight");
             }
@@ -46,8 +45,7 @@ namespace Quiz
         public Thickness PlayerNameMargin
         {
             get { return _playerNameMargin; }
-            set
-            {
+            set {
                 _playerNameMargin = value;
                 OnPropertyChanged("PlayerNameMargin");
             }
@@ -76,7 +74,8 @@ namespace Quiz
         private double _playerBarHeight;
         private Thickness _playerNameMargin;
 
-        private ModuleWorker mWorker;
+        private ButtonModuleConnector buttonConnector;
+        private RegistrationManager registrationManager;
 
         public MainWindow()
         {
@@ -95,18 +94,20 @@ namespace Quiz
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            buttonConnector = new ButtonModuleConnector();
+            buttonConnector.Init();
+
+            registrationManager = new RegistrationManager();
+            registrationManager.Init(buttonConnector);
+            registrationManager.OnRegistrationChanged += RegistrationManager_OnRegistrationChanged;
+
             WiFiWorker worker = new WiFiWorker();
             worker.Init();
-            ChangeWiFiSignal(1);
             worker.OnStatusChanged += ChangeWiFiSignal;
             worker.StartWorker();
 
-            mWorker = new ModuleWorker();
-            mWorker.Init();
-
             AddPlayer();
             AddPlayer();
-            Players[0].ChangeStatus(1);
 
             MediaBlock.LoadedBehavior = MediaState.Manual;
             MediaBlock.UnloadedBehavior = MediaState.Manual;
@@ -117,6 +118,28 @@ namespace Quiz
 
             //_manager = new QuestionManager(_questions, _groupsTables, NewResponding, IncreasePoint, questionsBlock, questionNumber);
             //_manager.Start();
+        }
+
+        private void RegistrationManager_OnRegistrationChanged(int playerIndex, RegistrationManager.RegistrationStatus status, int buttonIndex)
+        {
+            switch (status) {
+                case RegistrationManager.RegistrationStatus.Disable:
+                    {
+                        Players[playerIndex].ChangeStatus(0);
+                        break;
+                    }
+                case RegistrationManager.RegistrationStatus.Registered:
+                    {
+                        Players[playerIndex].ChangeStatus(2);
+                        Players[playerIndex].ButtonIndex = buttonIndex;
+                        break;
+                    }
+                case RegistrationManager.RegistrationStatus.Registrating:
+                    {
+                        Players[playerIndex].ChangeStatus(1);
+                        break;
+                    }
+            }
         }
 
         #region PlayersSupportMethods
@@ -132,6 +155,8 @@ namespace Quiz
             } else {
                 Players.Add(new Player(string.Format("Игрок {0}", playersCount + 1), Color.FromRgb(48, 59, 63), playersCount));
             }
+
+            registrationManager.Register(playersCount);
 
             playersCount++;
 
@@ -171,10 +196,12 @@ namespace Quiz
             switch (signal) {
                 case 0:
                     {
+                        registrationManager.Stop();
                         break; 
                     }
                 case 1:
                     {
+                        registrationManager.Start();
                         dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
@@ -182,6 +209,7 @@ namespace Quiz
                     }
                 case 2:
                     {
+                        registrationManager.Start();
                         dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
@@ -189,6 +217,7 @@ namespace Quiz
                     }
                 case 3:
                     {
+                        registrationManager.Start();
                         dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
                         dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
@@ -196,6 +225,7 @@ namespace Quiz
                     }
                 case 4:
                     {
+                        registrationManager.Start();
                         dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
                         dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
                         dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
@@ -275,10 +305,10 @@ namespace Quiz
             AddPoints(1, 2);
             AddPoints(1, 2);
 
-            //mWorker.GetButtonClick();
-        }
-
-        #endregion
+            foreach (Player p in Players) {
+                MessageBox.Show(p.ButtonIndex.ToString());
+            }
+        } 
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
@@ -302,5 +332,7 @@ namespace Quiz
             StartButton.Text = "Продолжить";
             FooterGrid.ColumnDefinitions[0].Width = new GridLength(2.1, GridUnitType.Star);
         }
+
+        #endregion
     }
 }

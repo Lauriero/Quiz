@@ -13,6 +13,7 @@ namespace Quiz.Support.DataModels
 {
     public class Player : INotifyPropertyChanged
     {
+        public int ButtonIndex { get; set; }
         public int PlayerIndex { get; private set; }
         public string Name { get; set; }
         public int Status { get; private set; }
@@ -31,10 +32,17 @@ namespace Quiz.Support.DataModels
             }
         }
         public SolidColorBrush PlayerBrush { get; }
-        public SolidColorBrush StatusBrush { get; private set; }
+        public SolidColorBrush StatusBrush {
+            get { return _sBrush; }
+            set {
+                _sBrush = value;
+                OnPropertyChanged("StatusBrush");
+            }
+        }
 
         private int _points;
         private double _playerBarHeight;
+        private SolidColorBrush _sBrush;
 
         private Color _disconnectColor = Color.FromRgb(206, 2, 2);
         private Color _connectingColor = Color.FromRgb(232, 216, 0);
@@ -52,6 +60,7 @@ namespace Quiz.Support.DataModels
         /// <param name="maxPoint">Max points value</param>
         /// <param name="pointBarsContainerWidth">Width of container with pointBars</param>
         public Player(string name, Color c, int pIndex) {
+            ButtonIndex = -1;
             PlayerBarHeight = 0;
             Points = 0;
             

@@ -12,7 +12,7 @@
                 <ResourceDictionary x:Name="AddPlayer" Source="Resources/Images/AddPlayer.xaml" />
                 <ResourceDictionary x:Name="WiFi" Source="Resources/Images/WiFi.xaml" />
 
-
+                <ResourceDictionary x:Name="WiFiDisconnect" Source="Resources/Images/WiFiDisconnected.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
