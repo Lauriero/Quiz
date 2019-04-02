@@ -49,6 +49,7 @@ namespace Quiz.Support
                     }
 
                     registrationOrder.RemoveAt(i);
+                    i--;
                 }
             }
         }

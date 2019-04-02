@@ -67,6 +67,7 @@ namespace Quiz
 
         private int playersCount = 0;
         private int maxPoint = 20;
+        private int WiFiStatus = 0;
 
         private double pointBarWidthStep = 0;
         private double pointBarsContainerWidth = 0;
@@ -193,6 +194,8 @@ namespace Quiz
             ResourceDictionary dict = new ResourceDictionary();
             dict.Source = new Uri("Resources/Images/WiFi.xaml", UriKind.Relative);
 
+            WiFiStatus = signal;
+
             switch (signal) {
                 case 0:
                     {
@@ -305,14 +308,12 @@ namespace Quiz
             AddPoints(1, 2);
             AddPoints(1, 2);
 
-            foreach (Player p in Players) {
-                MessageBox.Show(p.ButtonIndex.ToString());
-            }
+            registrationManager.Stop();
         } 
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            if (SettingsBorder.Height != 0) { return; }
+            if (SettingsBorder.Height != 0 || WiFiStatus != 0) { return; }
 
             ColorAnimation blackerAnimation = new ColorAnimation();
             blackerAnimation.From = Color.FromArgb(0, 0, 0, 0);
