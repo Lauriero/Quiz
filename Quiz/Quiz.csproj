@@ -67,6 +67,7 @@
     <Compile Include="Support\DataModels\Player.cs" />
     <Compile Include="Support\DataModels\Question.cs" />
     <Compile Include="Support\ButtonModuleConnector.cs" />
+    <Compile Include="Support\Extensions.cs" />
     <Compile Include="Support\QuizManager.cs" />
     <Compile Include="Support\RegisterManager.cs" />
     <Compile Include="Support\WiFiWorker.cs" />

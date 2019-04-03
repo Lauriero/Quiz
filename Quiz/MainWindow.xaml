@@ -9,7 +9,7 @@
         Title="MainWindow" 
         Height="1080" Width="1920" 
         WindowState="Maximized" WindowStyle="None" 
-        Loaded="Window_Loaded" >
+        Loaded="Window_Loaded" KeyUp="Window_KeyUp">
 
     <Window.Resources>
         <SolidColorBrush x:Key="DarkestBrush" Color="#212226" />
@@ -155,9 +155,12 @@
                         BorderThickness="0,0,0,2" BorderBrush="{StaticResource DarkestBrush}" 
                         Background="{StaticResource SexDarkBrush}" >
 
-                        <TextBlock Style="{StaticResource VerticalCentredTextBlock}" 
-                            FontSize="33" Text="Вопрос 1" 
-                            Padding="3,0,0,0" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource VerticalCentredTextBlock}" 
+                                FontSize="{Binding QuestionNumberFontSize}" Text="Вопрос" Padding="3,0,0,0" />
+                            <TextBlock Style="{StaticResource VerticalCentredTextBlock}" 
+                                FontSize="{Binding QuestionNumberFontSize}" Text="{Binding QuestionNumber}" Padding="7,0,0,0"/>
+                        </StackPanel>
                     </Border>
 
                     <!--#region PlayerNamesBlocks-->
@@ -195,16 +198,16 @@
                     <Border Grid.Column="1" Grid.Row="0" Background="{StaticResource SexLightDarkBrush}"
                         Style="{StaticResource VerticalCentredTextBorder}" 
                         BorderThickness="0,0,0,2" BorderBrush="{StaticResource DarkestBrush}">
-                        
-                        <TextBlock x:Name="QuestionTextBlock" Text="Сколько длилась блокада" 
-                            FontSize="33" Style="{StaticResource VerticalCentredTextBlock}" Padding="20,0,0,0" />
+
+                        <TextBlock x:Name="QuestionTextBlock" Text="{Binding QuestionText}" 
+                            FontSize="{Binding QuestionTextFontSize}" Foreground="White" TextWrapping="Wrap" Padding="20,0,0,0" />
                     </Border>
 
                     <!--Player Point Blocks-->
                     <Grid Grid.Column="1" Grid.Row="1" Background="#363940">
                         <Grid>
                             <Grid>
-                                <MediaElement x:Name="MediaBlock" Source="Video/Question1.mp4" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Top"/>
+                                <MediaElement Visibility="Hidden" x:Name="MediaBlock" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Top"/>
                             </Grid>
                             <Grid>
                                 <Border VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="0,0,0,50">

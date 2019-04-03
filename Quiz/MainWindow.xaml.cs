@@ -34,12 +34,39 @@ namespace Quiz
 
         public ObservableCollection<Player> Players { get; set; }
         public int RoundNumber { get; set; }
-        public double PlayerBarHeight
-        {
+        public double PlayerBarHeight {
             get { return _playerBarHeight; }
             set {
                 _playerBarHeight = value;
                 OnPropertyChanged("PlayerBarHeight");
+            }
+        }
+        public int QuestionNumber {
+            get { return _questionNumber; }
+            set {
+                _questionNumber = value;
+                OnPropertyChanged("QuestionNumber");
+            }
+        }
+        public string QuestionText {
+            get { return _questionString; }
+            set {
+                _questionString = value;
+                OnPropertyChanged("QuestionText");
+            }
+        }
+        public int QuestionNumberFontSize {
+            get { return _questionNumberFontSize; }
+            set {
+                _questionNumberFontSize = value;
+                OnPropertyChanged("QuestionNumberFontSize");
+            }
+        }
+        public int QuestionTextFontSize {
+            get { return _questionTextFontSize; }
+            set {
+                _questionTextFontSize = value;
+                OnPropertyChanged("QuestionTextFontSize");
             }
         }
         public Thickness PlayerNameMargin
@@ -66,6 +93,7 @@ namespace Quiz
         #endregion
 
         private int playersCount = 0;
+        private int activePlayer = -1;
         private int maxPoint = 20;
         private int WiFiStatus = 0;
 
@@ -73,14 +101,21 @@ namespace Quiz
         private double pointBarsContainerWidth = 0;
         private double playersNameContainerHeight = 0;
         private double _playerBarHeight;
+        private int _questionNumber;
+        private int _questionNumberFontSize;
+        private int _questionTextFontSize;
+        private string _questionString;
         private Thickness _playerNameMargin;
 
         private ButtonModuleConnector buttonConnector;
         private RegistrationManager registrationManager;
+        private QuizManager quizManager;
 
         public MainWindow()
         {
             RoundNumber = 1;
+            QuestionNumberFontSize = 33;
+            QuestionTextFontSize = 30;
 
             Players = new ObservableCollection<Player>();
             this.DataContext = this;
@@ -102,6 +137,34 @@ namespace Quiz
             registrationManager.Init(buttonConnector);
             registrationManager.OnRegistrationChanged += RegistrationManager_OnRegistrationChanged;
 
+            List<Question> questions = new List<Question>();
+            Question q1 = new Question();
+            Question q2 = new Question();
+            Question q3 = new Question();
+            q1.questionText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eros sapien, malesuada nec congue vel, feugiat id nisi. Vivamus id ex pulvinar, varius purus eget, tristique leo. Mauris interdum, sem eu hendrerit accumsan, dolor dui interdum tortor, in posuere velit turpis ut libero. Nam sodales hendrerit orci ut laoreet. Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
+            q1.points = 10;
+            q1.timeToAnswer = 20;
+            q1.videoPath = "Question1.mp4";
+            q1.isVideoPathRelative = true;
+            q2.questionText = "Сколько длилась блокада.";
+            q2.points = 10;
+            q2.timeToAnswer = 20;
+            q2.videoPath = null;
+            q2.isVideoPathRelative = true;
+            q3.questionText = "Dolor dui interdum tortor, in posuere velit turpis ut libero. Nam sodales hendrerit orci ut laoreet. Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
+            q3.points = 10;
+            q3.timeToAnswer = 20;
+            q3.videoPath = null;
+            q3.isVideoPathRelative = true;
+            questions.Add(q1);questions.Add(q2);questions.Add(q3);
+
+            quizManager = new QuizManager();
+            quizManager.OnNewQuestion += QuizManager_OnNewQuestion;
+            quizManager.OnPlayerButtonClicked += QuizManager_OnPlayerButtonClicked;
+            quizManager.OnRightAnswer += QuizManager_OnRightAnswer;
+            quizManager.OnWrongAnswer += QuizManager_OnWrongAnswer;
+            quizManager.Init(questions, buttonConnector);
+
             WiFiWorker worker = new WiFiWorker();
             worker.Init();
             worker.OnStatusChanged += ChangeWiFiSignal;
@@ -112,30 +175,75 @@ namespace Quiz
 
             MediaBlock.LoadedBehavior = MediaState.Manual;
             MediaBlock.UnloadedBehavior = MediaState.Manual;
-
-            MediaBlock.Source = new Uri(System.IO.Path.Combine(Environment.CurrentDirectory, "Question1.mp4"));
             MediaBlock.Volume = 0.5f;
-            //MediaBlock.Play();
-
-            //_manager = new QuestionManager(_questions, _groupsTables, NewResponding, IncreasePoint, questionsBlock, questionNumber);
-            //_manager.Start();
         }
 
-        private void RegistrationManager_OnRegistrationChanged(int playerIndex, RegistrationManager.RegistrationStatus status, int buttonIndex)
+        private void QuizManager_OnWrongAnswer()
+        {
+            activePlayer = -1;
+        }
+
+        private void QuizManager_OnRightAnswer(int points)
+        {
+            if (activePlayer >= 0) {
+                AddPoints(activePlayer, points);
+            }
+        }
+
+        private void QuizManager_OnPlayerButtonClicked(int buttonIndex)
+        {
+            activePlayer = Players.Where(p => p.ButtonIndex == buttonIndex).ToList()[0].PlayerIndex;
+        }
+
+        private void QuizManager_OnNewQuestion(string text, QuestionKind kind, List<Answer> answers, string videoPath, bool isVideoPathRelative)
+        {
+            switch (kind) {
+                case QuestionKind.WithVideo:
+                    {
+                        if (isVideoPathRelative) {
+                            MediaBlock.Source = new Uri(System.IO.Path.Combine(Environment.CurrentDirectory, videoPath));
+                        } else {
+                            MediaBlock.Source = new Uri(videoPath);
+                        }
+                        MediaBlock.Visibility = Visibility.Visible;
+                        PointBarsContainer.Visibility = Visibility.Hidden;
+                        MediaBlock.Play();
+
+                        break;
+                    }
+            }
+       
+            QuestionNumberFontSize = 33 - ((int)Math.Log10(QuestionNumber) + 1) * 2;
+            if (text.Count() < 93) { 
+                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Center;
+            }
+            else if (text.Count() < 185) {
+                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Top;
+            }
+            else {
+                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Top;
+                text = text.Substring(0, 182) + "...";
+            }
+            QuestionText = text;
+
+            QuestionNumber++;
+        }
+
+        private void RegistrationManager_OnRegistrationChanged(int playerIndex, RegistrationStatus status, int buttonIndex)
         {
             switch (status) {
-                case RegistrationManager.RegistrationStatus.Disable:
+                case RegistrationStatus.Disable:
                     {
                         Players[playerIndex].ChangeStatus(0);
                         break;
                     }
-                case RegistrationManager.RegistrationStatus.Registered:
+                case RegistrationStatus.Registered:
                     {
                         Players[playerIndex].ChangeStatus(2);
                         Players[playerIndex].ButtonIndex = buttonIndex;
                         break;
                     }
-                case RegistrationManager.RegistrationStatus.Registrating:
+                case RegistrationStatus.Registrating:
                     {
                         Players[playerIndex].ChangeStatus(1);
                         break;
@@ -199,20 +307,18 @@ namespace Quiz
             switch (signal) {
                 case 0:
                     {
-                        registrationManager.Stop();
+                       
                         break; 
                     }
                 case 1:
                     {
-                        registrationManager.Start();
                         dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         break;
                     }
                 case 2:
-                    {
-                        registrationManager.Start();
+                    { 
                         dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
@@ -220,7 +326,6 @@ namespace Quiz
                     }
                 case 3:
                     {
-                        registrationManager.Start();
                         dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
                         dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
                         dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
@@ -228,7 +333,6 @@ namespace Quiz
                     }
                 case 4:
                     {
-                        registrationManager.Start();
                         dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
                         dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
                         dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
@@ -307,13 +411,11 @@ namespace Quiz
 
             AddPoints(1, 2);
             AddPoints(1, 2);
-
-            registrationManager.Stop();
         } 
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            if (SettingsBorder.Height != 0 || WiFiStatus != 0) { return; }
+            if (SettingsBorder.Height != 0) { return; }
 
             ColorAnimation blackerAnimation = new ColorAnimation();
             blackerAnimation.From = Color.FromArgb(0, 0, 0, 0);
@@ -335,5 +437,26 @@ namespace Quiz
         }
 
         #endregion
+
+        private void Window_KeyUp(object sender, KeyEventArgs e)
+        {
+            switch (e.Key) {
+                case Key.Y:
+                    {
+                        quizManager.RightAnswerClick();
+                        break;
+                    }
+                case Key.N:
+                    {
+                        quizManager.WrongAnswerClick();
+                        break;
+                    }
+                case Key.S:
+                    {
+                        quizManager.StartClick();
+                        break;
+                    }
+            }
+        }
     }
 }

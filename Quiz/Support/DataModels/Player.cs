@@ -24,13 +24,6 @@ namespace Quiz.Support.DataModels
                 OnPropertyChanged("Points");
             }
         }
-        public double PlayerBarHeight {
-            get { return _playerBarHeight; }
-            set {
-                _playerBarHeight = value;
-                OnPropertyChanged("PlayerBarHeight");
-            }
-        }
         public SolidColorBrush PlayerBrush { get; }
         public SolidColorBrush StatusBrush {
             get { return _sBrush; }
@@ -61,7 +54,6 @@ namespace Quiz.Support.DataModels
         /// <param name="pointBarsContainerWidth">Width of container with pointBars</param>
         public Player(string name, Color c, int pIndex) {
             ButtonIndex = -1;
-            PlayerBarHeight = 0;
             Points = 0;
             
             PlayerIndex = pIndex;
