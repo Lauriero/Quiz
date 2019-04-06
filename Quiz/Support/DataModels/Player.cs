@@ -15,7 +15,13 @@ namespace Quiz.Support.DataModels
     {
         public int ButtonIndex { get; set; }
         public int PlayerIndex { get; private set; }
-        public string Name { get; set; }
+        public string Name {
+            get { return _name; }
+            set {
+                _name = value;
+                OnPropertyChanged("Name");
+            }
+        }
         public int Status { get; private set; }
         public int Points {
             get { return _points; }
@@ -34,7 +40,7 @@ namespace Quiz.Support.DataModels
         }
 
         private int _points;
-        private double _playerBarHeight;
+        private string _name;
         private SolidColorBrush _sBrush;
 
         private Color _disconnectColor = Color.FromRgb(206, 2, 2);

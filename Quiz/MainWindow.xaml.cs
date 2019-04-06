@@ -4,21 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace Quiz
@@ -93,9 +85,12 @@ namespace Quiz
         #endregion
 
         private int playersCount = 0;
+        private int registratingPlayerCounter = 0;
         private int activePlayer = -1;
         private int maxPoint = 20;
         private int WiFiStatus = 0;
+
+        private bool isRegistrationActive = false;
 
         private double pointBarWidthStep = 0;
         private double pointBarsContainerWidth = 0;
@@ -131,11 +126,12 @@ namespace Quiz
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             buttonConnector = new ButtonModuleConnector();
-            buttonConnector.Init();
+            buttonConnector.Init("COM4");
 
             registrationManager = new RegistrationManager();
             registrationManager.Init(buttonConnector);
-            registrationManager.OnRegistrationChanged += RegistrationManager_OnRegistrationChanged;
+            registrationManager.OnPlayerDisable += RegistrationManager_OnPlayerDisable;
+            registrationManager.OnPlayerRegistrated += RegistrationManager_OnPlayerRegistrated;
 
             List<Question> questions = new List<Question>();
             Question q1 = new Question();
@@ -165,94 +161,21 @@ namespace Quiz
             quizManager.OnWrongAnswer += QuizManager_OnWrongAnswer;
             quizManager.Init(questions, buttonConnector);
 
-            WiFiWorker worker = new WiFiWorker();
-            worker.Init();
-            worker.OnStatusChanged += ChangeWiFiSignal;
-            worker.StartWorker();
+            AddPlayer();
+            AddPlayer();
 
-            AddPlayer();
-            AddPlayer();
+            Players[0].ChangeStatus(1);
 
             MediaBlock.LoadedBehavior = MediaState.Manual;
             MediaBlock.UnloadedBehavior = MediaState.Manual;
             MediaBlock.Volume = 0.5f;
         }
 
-        private void QuizManager_OnWrongAnswer()
-        {
-            activePlayer = -1;
-        }
-
-        private void QuizManager_OnRightAnswer(int points)
-        {
-            if (activePlayer >= 0) {
-                AddPoints(activePlayer, points);
-            }
-        }
-
-        private void QuizManager_OnPlayerButtonClicked(int buttonIndex)
-        {
-            activePlayer = Players.Where(p => p.ButtonIndex == buttonIndex).ToList()[0].PlayerIndex;
-        }
-
-        private void QuizManager_OnNewQuestion(string text, QuestionKind kind, List<Answer> answers, string videoPath, bool isVideoPathRelative)
-        {
-            switch (kind) {
-                case QuestionKind.WithVideo:
-                    {
-                        if (isVideoPathRelative) {
-                            MediaBlock.Source = new Uri(System.IO.Path.Combine(Environment.CurrentDirectory, videoPath));
-                        } else {
-                            MediaBlock.Source = new Uri(videoPath);
-                        }
-                        MediaBlock.Visibility = Visibility.Visible;
-                        PointBarsContainer.Visibility = Visibility.Hidden;
-                        MediaBlock.Play();
-
-                        break;
-                    }
-            }
-       
-            QuestionNumberFontSize = 33 - ((int)Math.Log10(QuestionNumber) + 1) * 2;
-            if (text.Count() < 93) { 
-                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Center;
-            }
-            else if (text.Count() < 185) {
-                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Top;
-            }
-            else {
-                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Top;
-                text = text.Substring(0, 182) + "...";
-            }
-            QuestionText = text;
-
-            QuestionNumber++;
-        }
-
-        private void RegistrationManager_OnRegistrationChanged(int playerIndex, RegistrationStatus status, int buttonIndex)
-        {
-            switch (status) {
-                case RegistrationStatus.Disable:
-                    {
-                        Players[playerIndex].ChangeStatus(0);
-                        break;
-                    }
-                case RegistrationStatus.Registered:
-                    {
-                        Players[playerIndex].ChangeStatus(2);
-                        Players[playerIndex].ButtonIndex = buttonIndex;
-                        break;
-                    }
-                case RegistrationStatus.Registrating:
-                    {
-                        Players[playerIndex].ChangeStatus(1);
-                        break;
-                    }
-            }
-        }
-
         #region PlayersSupportMethods
 
+        /// <summary>
+        /// Add the new player
+        /// </summary>
         private void AddPlayer() {
 
             if (playersCount == MAX_PLAYERS_COUNT - 1) {
@@ -265,18 +188,30 @@ namespace Quiz
                 Players.Add(new Player(string.Format("Игрок {0}", playersCount + 1), Color.FromRgb(48, 59, 63), playersCount));
             }
 
-            registrationManager.Register(playersCount);
+            if (!isRegistrationActive) {
+                isRegistrationActive = true;
+                Players.Last().ChangeStatus(1);
+                registrationManager.RegisterNext();
+            }
 
             playersCount++;
 
             PlayerBarHeight = playersNameContainerHeight / playersCount;
             PlayerNameMargin = new Thickness(0);
-            if (PlayerBarHeight > 100) {
-                PlayerBarHeight = 100;
-                PlayerNameMargin = new Thickness(0, 0, 0, 6);
+            if (PlayerBarHeight > 140) {
+                PlayerBarHeight = 140;
+
+                double margins = (playersNameContainerHeight - playersCount * PlayerBarHeight) / ((playersCount - 1) * 2 + 2);
+                PlayerNameMargin = new Thickness(0, margins, 0, margins);
+
             }
         }
 
+        /// <summary>
+        /// Add points to player
+        /// </summary>
+        /// <param name="playerIndex">Index of player</param>
+        /// <param name="points">Adding points</param>
         private void AddPoints(int playerIndex, int points) {
             double newPointBarWidth = (Players[playerIndex].Points += points) * pointBarWidthStep;
 
@@ -297,50 +232,117 @@ namespace Quiz
 
         #region SupportEventsListeners
 
-        private void ChangeWiFiSignal(int signal)
+        /// <summary>
+        /// Invoke when player button successfully registrate
+        /// </summary>
+        /// <param name="buttonIndex">Index of player button</param>
+        private void RegistrationManager_OnPlayerRegistrated(int buttonIndex)
         {
-            ResourceDictionary dict = new ResourceDictionary();
-            dict.Source = new Uri("Resources/Images/WiFi.xaml", UriKind.Relative);
+            Players[registratingPlayerCounter].ChangeStatus(2);
+            Players[registratingPlayerCounter].ButtonIndex = buttonIndex;
 
-            WiFiStatus = signal;
+            registratingPlayerCounter++;
 
-            switch (signal) {
-                case 0:
+            if (registratingPlayerCounter < Players.Count) {
+                Players[registratingPlayerCounter].ChangeStatus(1);         
+                registrationManager.RegisterNext();
+            } else {
+                isRegistrationActive = false;
+            }
+        }
+
+        /// <summary>
+        /// Invoke when player registration failed
+        /// </summary>
+        private void RegistrationManager_OnPlayerDisable()
+        {
+            Players[registratingPlayerCounter].ChangeStatus(0);
+
+            registratingPlayerCounter++;
+
+            if (registratingPlayerCounter < Players.Count) {
+                Players[registratingPlayerCounter].ChangeStatus(1);
+                registrationManager.RegisterNext();
+            } else {
+                isRegistrationActive = false;
+            }
+        }
+
+        /// <summary>
+        /// Invoke when player give a wrong answer
+        /// </summary>
+        private void QuizManager_OnWrongAnswer()
+        {
+            activePlayer = -1;
+        }
+
+        /// <summary>
+        /// Invoke when player give a right answer
+        /// </summary>
+        /// <param name="points"></param>
+        private void QuizManager_OnRightAnswer(int points)
+        {
+            if (activePlayer >= 0) {
+                AddPoints(activePlayer, points);
+            }
+        }
+
+        /// <summary>
+        /// Invoke when player's button clicked
+        /// </summary>
+        /// <param name="buttonIndex">Index of clicked button</param>
+        private void QuizManager_OnPlayerButtonClicked(int buttonIndex)
+        {
+            activePlayer = Players.Where(p => p.ButtonIndex == buttonIndex).ToList()[0].PlayerIndex;
+        }
+
+        /// <summary>
+        /// Invoke when manager starts new question
+        /// </summary>
+        /// <param name="text">Text of question</param>
+        /// <param name="kind">Type of question</param>
+        /// <param name="answers">List of answers</param>
+        /// <param name="videoPath">Path to video for question</param>
+        /// <param name="isVideoPathRelative">Reletive path to video or not</param>
+        private void QuizManager_OnNewQuestion(string text, QuestionKind kind, List<Answer> answers, string videoPath, bool isVideoPathRelative)
+        {
+            switch (kind) {
+                case QuestionKind.WithVideo:
                     {
-                       
-                        break; 
-                    }
-                case 1:
-                    {
-                        dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
-                        dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
-                        dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
+                        if (isVideoPathRelative) {
+                            MediaBlock.Source = new Uri(System.IO.Path.Combine(Environment.CurrentDirectory, videoPath));
+                        } else {
+                            MediaBlock.Source = new Uri(videoPath);
+                        }
+                        MediaBlock.Visibility = Visibility.Visible;
+                        PointBarsContainer.Visibility = Visibility.Hidden;
+                        MediaBlock.Play();
+
                         break;
                     }
-                case 2:
-                    { 
-                        dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
-                        dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
-                        dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
-                        break;
-                    }
-                case 3:
+                case QuestionKind.Simple:
                     {
-                        dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
-                        dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
-                        dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
-                        break;
-                    }
-                case 4:
-                    {
-                        dict["FirstWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
-                        dict["SecondWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
-                        dict["ThirdWiFiStickBrush"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+                        MediaBlock.Stop();
+                        MediaBlock.Visibility = Visibility.Hidden;
+                        PointBarsContainer.Visibility = Visibility.Visible;
                         break;
                     }
             }
+       
+            QuestionNumberFontSize = 33 - ((int)Math.Log10(QuestionNumber) + 1) * 2;
+            if (text.Count() < 93) { 
+                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Center;
+            }
+            else if (text.Count() < 185) {
+                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Top;
+            }
+            else {
+                QuestionTextBlock.VerticalAlignment = VerticalAlignment.Top;
+                text = text.Substring(0, 182) + "...";
+            }
+            QuestionText = text;
 
-            Application.Current.Resources.MergedDictionaries[3] = dict;
+            QuestionNumber++;
         }
 
         #endregion
@@ -409,13 +411,32 @@ namespace Quiz
             (blacker.Background as SolidColorBrush).BeginAnimation(SolidColorBrush.ColorProperty, blackerAnimation);
             SettingsBorder.BeginAnimation(HeightProperty, settingsHeightAnimation);
 
-            AddPoints(1, 2);
-            AddPoints(1, 2);
+            registrationManager.StopManager();
+
+            AddPoints(0, 3);
+            AddPoints(1, 5);
+            AddPoints(2, 8);
+
+            Thread thread = new Thread(() => {
+                Thread.Sleep(1000);
+                foreach (Player p in Players) {
+                    if (p.ButtonIndex == -1) {
+                        Extensions.ExecuteInApplicationThread(() => {
+                            Players.Remove(p);
+                        });
+                    }
+                }
+            });
+
+            thread.Start();
+
         } 
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
             if (SettingsBorder.Height != 0) { return; }
+
+            AddPlayerBtn.Visibility = Visibility.Collapsed;
 
             ColorAnimation blackerAnimation = new ColorAnimation();
             blackerAnimation.From = Color.FromArgb(0, 0, 0, 0);
@@ -435,8 +456,6 @@ namespace Quiz
             StartButton.Text = "Продолжить";
             FooterGrid.ColumnDefinitions[0].Width = new GridLength(2.1, GridUnitType.Star);
         }
-
-        #endregion
 
         private void Window_KeyUp(object sender, KeyEventArgs e)
         {
@@ -458,5 +477,9 @@ namespace Quiz
                     }
             }
         }
+
+        #endregion
+
+        
     }
 }

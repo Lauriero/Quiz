@@ -7,47 +7,56 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Windows;
 using System.Windows.Threading;
+using System.IO.Ports;
 
 namespace Quiz.Support
 {
     class ButtonModuleConnector
     {
-        private const string MODULE_SETCOMMAND_URL = "http://192.168.4.1/getButton";
-        private const string MODULE_GETDATA_URL = "http://192.168.4.1/getData";
-        private const string MODULE_RESTART_URL = "http://192.168.4.1/restart";
+        private const int PORT_BAUD_RATE = 9600;
 
-        private bool isWorkerActive = false;
+        public string PortName { get; set; }
 
-        private WebClient client;
+        private SerialPort modulePort;
 
-        public void Init() {
-            client = new WebClient();
+        private bool isConnectorActive = true;
+
+        public void Init(string portName)
+        {
+            PortName = portName;
+
+            modulePort = new SerialPort(portName, PORT_BAUD_RATE);
+            modulePort.DtrEnable = true;
+            modulePort.ReadTimeout = 100;
+            
+            try {
+                modulePort.Open();
+            } catch { }
         }
 
-        public int GetButtonClick() {
-            isWorkerActive = true;
+        public int GetButtonClick()
+        {
+            isConnectorActive = true;
 
-            using (client) {
-                client.DownloadString(new Uri(MODULE_SETCOMMAND_URL));
-
-                int buttonIndex = -1;
-                string response = "";
-                while (response == "") {
-                    if (!isWorkerActive) {
-                        response = "-1";
-                        client.DownloadString(new Uri(MODULE_RESTART_URL));
-                        break;
-                    } 
-                    response = client.DownloadString(new Uri(MODULE_GETDATA_URL));
+            int incomingByte;
+            while (isConnectorActive) {
+                try {
+                    incomingByte = modulePort.ReadByte();
+                    return incomingByte;
+                } catch (Exception e) {
+                    if (e is TimeoutException) {
+                        Thread.Sleep(100);
+                    } else {
+                        return -1;
+                    }
                 }
-
-                buttonIndex = int.Parse(response);
-                return buttonIndex;
             }
+
+            return -2;
         }
 
-        public void AbortConnection() {
-            isWorkerActive = false;
+        public void AbortListener() {
+            isConnectorActive = false;
         }
     }
 }
