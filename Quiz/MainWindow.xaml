@@ -25,14 +25,14 @@
         <Style x:Key="StandartTextBlock" TargetType="{x:Type TextBlock}">
             <Setter Property="Foreground" Value="White" />
         </Style>
-        
+
         <Style x:Key="VerticalCentredTextBorder" TargetType="{x:Type Border}" BasedOn="{StaticResource StandartBorder}">
             <Setter Property="VerticalAlignment" Value="Stretch" />
         </Style>
         <Style x:Key="CentredTextBorder" TargetType="{x:Type Border}" BasedOn="{StaticResource VerticalCentredTextBorder}">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
-        
+
         <Style x:Key="VerticalCentredTextBlock" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource StandartTextBlock}">
             <Setter Property="Foreground" Value="White" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -55,7 +55,7 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             Padding="0,2,0,2" >
-                            
+
                             <ContentPresenter/>
                             <!--Когда у кнопки или прочей дичи есть контент (а-ля картинок)-->
                         </Border>
@@ -117,8 +117,8 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="0" HorizontalAlignment="Left" x:Name="SettingsButton" Style="{StaticResource StaticButtonTemplate}" Click="SettingsButton_Click" >
-                        <Image Source="{DynamicResource WiFiDrawingImage}" Margin="10,0,0,0" />
+                    <Button Width="30" HorizontalAlignment="Left" Grid.Column="0" Style="{StaticResource StaticButtonTemplate}" Click="SettingsButton_Click">
+                        
                     </Button>
 
                     <Button Grid.Column="2" Style="{StaticResource StaticButtonTemplate}" Click="HideWindowButton_Click">
@@ -145,9 +145,9 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="9*"/>
                     </Grid.RowDefinitions>
-                    
+
                     <!--#region First Column-->
-                    
+
                     <!--Question Number Field-->
                     <Border RenderOptions.EdgeMode="Aliased" 
                         Grid.Column="0" Grid.Row="0" 
@@ -164,7 +164,7 @@
                     </Border>
 
                     <!--#region PlayerNamesBlocks-->
-                    
+
                     <Grid Grid.Column="0" Grid.Row="1" x:Name="Row1" >
                         <ItemsControl x:Name="PlayerNamesContainer"
                             Background="{StaticResource SexDarkBrush}"
@@ -173,7 +173,7 @@
 
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid x:Name="PlayerNameBoxGrid" Margin="{Binding ElementName=MainWD, Path=PlayerNameMargin}" Height="{Binding ElementName=MainWD, Path=PlayerBarHeight}" VerticalAlignment="Stretch">
+                                    <Grid x:Name="PlayerNameBoxGrid" Margin="{Binding ElementName=MainWD, Path=PlayerNameMargin}" Height="{Binding ElementName=MainWD, Path=PlayerBarHeight}">
                                         <Rectangle Fill="{Binding Path=PlayerBrush}" />
                                         <Border Style="{StaticResource CentredTextBorder}">
                                             <TextBlock x:Name="PlayerNameBlock" 
@@ -189,11 +189,11 @@
                     </Grid>
 
                     <!--#endregion-->
-                    
+
                     <!--#endregion-->
 
                     <!--#region Second Column-->
-                    
+
                     <!--Question Field-->
                     <Border Grid.Column="1" Grid.Row="0" Background="{StaticResource SexLightDarkBrush}"
                         Style="{StaticResource VerticalCentredTextBorder}" 
@@ -204,210 +204,263 @@
                     </Border>
 
                     <!--Player Point Blocks-->
-                    <Grid Grid.Column="1" Grid.Row="1" Background="#363940">
-                        <Grid>
-                            <Grid>
-                                <MediaElement Visibility="Hidden" x:Name="MediaBlock" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Top"/>
-                            </Grid>
-                            <Grid>
-                                <Border VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="0,0,0,50">
-                                    <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Orientation="Horizontal">
-                                        
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                        </Grid>
-
-                        <Grid />
-
-                        <Grid>
-                            <ItemsControl x:Name="PointBarsContainer"
+                    <Grid Grid.Column="1" Grid.Row="1" Background="#363940" RenderOptions.EdgeMode="Aliased"> 
+                        <ItemsControl x:Name="PointBarsContainer" BorderThickness="0" RenderOptions.EdgeMode="Aliased"
                                 ItemsSource="{Binding Players}"
                                 Padding="4,0,0,0">
 
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
                                         <Grid x:Name="PointBarGrid" Width="0" Margin="{Binding ElementName=MainWD, Path=PlayerNameMargin}" Height="{Binding ElementName=MainWD, Path=PlayerBarHeight}" HorizontalAlignment="Left" VerticalAlignment="Stretch">
-                                            <Border BorderThickness="0" CornerRadius="0,7,7,0" Background="{Binding Path=PlayerBrush}" RenderOptions.EdgeMode="Aliased" />
+                                            <Border BorderThickness="0" CornerRadius="{Binding Path=PointsBarCornerRadius}" Background="{Binding Path=PlayerBrush}" RenderOptions.EdgeMode="Aliased" />
                                             <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" BorderThickness="0" Padding="0,0,20,0">
                                                 <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" 
-                                                    Text="{Binding Path=Points}" FontSize="45" Foreground="White"
-                                                    FontFamily="/Quiz;component/Resources/Fonts/#Impact" />
+                                                        Text="{Binding Path=Points}" FontSize="45" Foreground="White"
+                                                        FontFamily="/Quiz;component/Resources/Fonts/#Impact" />
                                             </Border>
                                         </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                                
-                            </ItemsControl>
-                        </Grid>
+
+                                        <Border Margin="{Binding ElementName=MainWD, Path=PlayerNameMargin}" Height="{Binding ElementName=MainWD, Path=PlayerBarHeight}" 
+                                                Width="{Binding Path=ExtraPointsBlockWidth}" Opacity="0.3"
+                                                Visibility="{Binding Path=ExtraPointsBlockVisibility}" 
+                                                Background="{Binding Path=PlayerBrush}" CornerRadius="0,7,7,0" RenderOptions.EdgeMode="Aliased" >
+                                            <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" BorderThickness="0" Padding="0,0,20,0">
+                                                <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" 
+                                                        Text="{Binding Path=ExtraPoints}" FontSize="42" Foreground="#E3FFFFFF"
+                                                        FontFamily="/Quiz;component/Resources/Fonts/#Impact" />
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Grid>
 
                     <!--#endregion-->
-                    
+
                     <!--#region Third Column-->
-                    
+
                     <!--Time Field-->
                     <Border Grid.Column="2" Grid.Row="0" Background="{StaticResource SexDarkBrush}"
-                            Style="{StaticResource CentredTextBorder}"
-                            BorderThickness="0,0,0,2" BorderBrush="{StaticResource DarkestBrush}"/>
+                        Style="{StaticResource CentredTextBorder}"
+                        BorderThickness="0,0,0,2" BorderBrush="{StaticResource DarkestBrush}">
+
+                        <TextBlock x:Name="TimeBlock" Style="{StaticResource CentredTextBlock}" FontSize="{Binding ElementName=MainWD, Path=AnswerTimeFontSize}" Text="{Binding ElementName=MainWD, Path=AnswerTimerText}" />
+                    </Border>
 
                     <!--Answer Time Blocks-->
                     <Grid Grid.Column="2" Grid.Row="1">
-                        <ItemsControl x:Name="Column3" Background="#303136"/>
+                        <ItemsControl x:Name="PlayerAnswerTimes"
+                            Background="{StaticResource SexDarkBrush}"
+                            BorderThickness="0"
+                            ItemsSource="{Binding Players}" >
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="{Binding ElementName=MainWD, Path=PlayerNameMargin}" Height="{Binding ElementName=MainWD, Path=PlayerBarHeight}" >
+                                        <Border Style="{StaticResource CentredTextBorder}">
+                                            <TextBlock Style="{StaticResource CentredTextBlock}" Text="{Binding Path=AnswerTime}" FontSize="25" />
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Grid>
-                    
+
                     <!--#endregion-->
-                   
+
                 </Grid>
 
                 <!--Setting field-->
-                <Grid x:Name="blacker" Background="#AE000000" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                <Grid x:Name="Blacker" Background="#AE000000" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="2*" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
+                    <Grid Visibility="Visible">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="0.9*" />
+                            <RowDefinition Height="2*" />
+                            <RowDefinition Height="0.9*" />
+                        </Grid.RowDefinitions>
 
-                    <Border Width="500" Grid.Row="1" x:Name="SettingsBorder" SizeChanged="SquareElement_SizeChanged" CornerRadius="23">
+                        <Border Width="500" Grid.Row="1" x:Name="SettingsBorder" SizeChanged="SquareElement_SizeChanged" CornerRadius="23">
 
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="1.6*"/>
-                                <RowDefinition Height="10*"/>
-                                <RowDefinition Height="0.8*"/>
-                            </Grid.RowDefinitions>
-                            
-                            <!--#region SettingsBar-->
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="1.6*"/>
+                                    <RowDefinition Height="10*"/>
+                                    <RowDefinition Height="0.8*"/>
+                                </Grid.RowDefinitions>
 
-                            <Border  Grid.Row="0" x:Name="SettingsBar" CornerRadius="23,23,0,0" Background="{StaticResource SexDarkBrush}" Padding="15,0,0,0" Margin="0">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
-                                    <Border Padding="0,4,0,4">
-                                        <Grid>
-                                            <Image Source="{DynamicResource WiFiDrawingImage}" Stretch="Fill" />
-                                            <Image Source="{DynamicResource WiFiDrawingImage}" Stretch="Fill" Visibility="Hidden" />
-                                        </Grid>
-                                    </Border>
+                                <!--#region SettingsBar-->
 
-                                    <Border Padding="20,18,0,18" >
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
-                                            <ItemsControl ItemsSource="{Binding Players}"
+                                <Border  Grid.Row="0" x:Name="SettingsBar" CornerRadius="23,23,0,0" Background="{StaticResource SexDarkBrush}" Padding="15,0,0,0" Margin="0">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                                        <Border Padding="0,4,0,4">
+                                            <Grid>
+                                                <Image Source="{DynamicResource ModuleIconDrawingImage }" Stretch="Uniform" Margin="3,2,2,2"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Padding="20,18,0,18" >
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                                <ItemsControl ItemsSource="{Binding Players}"
                                             VerticalContentAlignment="Stretch"
                                             HorizontalAlignment="Stretch"
                                             Background="Transparent"
                                             Padding="2,0,0,0"
                                             BorderThickness="0">
 
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch" HorizontalAlignment="Left"/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch" HorizontalAlignment="Left"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
 
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Padding="0,0,7,0">
-                                                            <Border SizeChanged="SquareElement_SizeChanged" >
-                                                                <Ellipse Stretch="Fill" Fill="{Binding Path=StatusBrush}" />
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Padding="0,0,7,0">
+                                                                <Border SizeChanged="SquareElement_SizeChanged" >
+                                                                    <Ellipse Stretch="Fill" Fill="{Binding Path=StatusBrush}" />
+                                                                </Border>
                                                             </Border>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            
-                                            <Border VerticalAlignment="Stretch" SizeChanged="SquareElement_SizeChanged">
-                                                <Button VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="0" BorderThickness="0" Style="{StaticResource StaticButtonTemplate}" Cursor="Hand" x:Name="AddPlayerBtn" Click="AddPlayerBtn_Click">
-                                                    <Button.Background>
-                                                        <ImageBrush ImageSource="{DynamicResource AddButtonDrawingImage}" Stretch="Uniform"/>
-                                                    </Button.Background>
-                                                </Button>
-                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
 
-                                            <TextBlock x:Name="Debug" Foreground="White" FontSize="15" />
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </Border>
+                                                <Border VerticalAlignment="Stretch" SizeChanged="SquareElement_SizeChanged">
+                                                    <Button VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="0" BorderThickness="0" Style="{StaticResource StaticButtonTemplate}" Cursor="Hand" x:Name="AddPlayerBtn" Click="AddPlayerBtn_Click">
+                                                        <Button.Background>
+                                                            <ImageBrush ImageSource="{DynamicResource AddButtonDrawingImage}" Stretch="Uniform"/>
+                                                        </Button.Background>
+                                                    </Button>
+                                                </Border>
 
-                            <!--#endregion-->
+                                                <TextBlock x:Name="Debug" Foreground="White" FontSize="15" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
 
-                            <!--#region PlayersInfo-->
+                                <!--#endregion-->
 
-                            <Border Grid.Row="1" x:Name="PlayersPanel" Background="#363940">
-                                <ItemsControl Background="Transparent"
+                                <!--#region PlayersInfo-->
+
+                                <Border Grid.Row="1" x:Name="PlayersPanel" Background="#363940">
+                                    <ItemsControl Background="Transparent"
                                     BorderThickness="0"
                                     HorizontalAlignment="Stretch"
                                     Padding="0" x:Name="PlayerSettingsContainer"
                                     ItemsSource="{Binding  Players}"
                                     HorizontalContentAlignment="Stretch">
 
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Vertical" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Vertical" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
 
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <DockPanel Background="#707070">
-                                                <Border Padding="0,0,0,1">
-                                                    <Border Background="{Binding Path=PlayerBrush}" Padding="0,6,0,6">
-                                                        <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
-                                                            <TextBox x:Name="PlayersSettingsBox" 
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Background="#707070">
+                                                    <Border Padding="0,0,0,1">
+                                                        <Border Background="{Binding Path=PlayerBrush}" Padding="0,6,0,6">
+                                                            <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
+                                                                <TextBox x:Name="PlayersSettingsBox" 
                                                                 Padding="10,0,0,0" Text="{Binding Path=Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                                                 FontSize="33" Foreground="White" FontFamily="Bebas Neue Bold" 
                                                                 BorderThickness="0" Background="Transparent" />
-                                                           
-                                                            <TextBlock Text="{Binding Path=PlayerIndex}" Visibility="Collapsed" />
-                                                        </StackPanel>
+
+                                                                <TextBlock Text="{Binding Path=PlayerIndex}" Visibility="Collapsed" />
+                                                            </StackPanel>
+                                                        </Border>
                                                     </Border>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+
+                                <!--#endregion-->
+
+                                <!--#region Footer-->
+
+                                <Border Grid.Row="2" x:Name="Footer" CornerRadius="0,0,23,23" Background="#303136">
+                                    <Grid x:Name="FooterGrid">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="3.5*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Grid Grid.Column="0" >
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border VerticalAlignment="Stretch">
+                                                    <TextBox VerticalAlignment="Center" Text="Тур:" Padding="15,0,0,3" FontSize="17" Background="Transparent" BorderThickness="0" Foreground="White" />
                                                 </Border>
-                                            </DockPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Border>
+                                                <Border VerticalAlignment="Stretch">
+                                                    <TextBox VerticalAlignment="Center" Text="{Binding RoundNumber}" Padding="0,0,0,3" FontSize="17" Background="Transparent" BorderThickness="0" Foreground="White" />
+                                                </Border>
+                                            </StackPanel>
+                                        </Grid>
 
-                            <!--#endregion-->
-                            
-                            <!--#region Footer-->
+                                        <Border Background="#02CE81" Grid.Column="1" CornerRadius="0,0,23,0">
+                                            <TextBlock x:Name="StartButton" Cursor="Hand" Text="Начать" Foreground="White" Padding="15,0,0,0" FontSize="18" MouseUp="StartButton_MouseUp" />
+                                        </Border>
 
-                            <Border Grid.Row="2" x:Name="Footer" CornerRadius="0,0,23,23" Background="#303136">
-                                <Grid x:Name="FooterGrid">
+                                    </Grid>
+                                </Border>
+
+                                <!--#endregion-->
+
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid x:Name="MediaGrid" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Visibility="Hidden">
+                        <Border x:Name="MediaBorder" Padding="300,30,300,0">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Margin="0,0,0,45">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="3.5*" />
+                                        <ColumnDefinition Width="5*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
 
-                                    <Grid Grid.Column="0" >
-                                        <StackPanel Orientation="Horizontal">
-                                            <Border VerticalAlignment="Stretch">
-                                                <TextBox VerticalAlignment="Center" Text="Тур:" Padding="15,0,0,3" FontSize="17" Background="Transparent" BorderThickness="0" Foreground="White" />
-                                            </Border>
-                                            <Border VerticalAlignment="Stretch">
-                                                <TextBox VerticalAlignment="Center" Text="{Binding RoundNumber}" Padding="0,0,0,3" FontSize="17" Background="Transparent" BorderThickness="0" Foreground="White" />
-                                            </Border>
-                                        </StackPanel>
-                                    </Grid>
+                                    <Border Grid.Column="0" CornerRadius="15,0,0,15"  Background="{StaticResource SexLightDarkBrush}" >
+                                        <Border Style="{StaticResource VerticalCentredTextBorder}" Padding="10,10"
+                                            BorderThickness="0,0,2,0" BorderBrush="{StaticResource DarkestBrush}">
 
-                                    <Border Background="#02CE81" Grid.Column="1" CornerRadius="0,0,23,0">
-                                        <TextBlock x:Name="StartButton" Cursor="Hand" Text="Начать" Foreground="White" Padding="15,0,0,0" FontSize="18" MouseUp="StartButton_MouseUp" />
+                                            <TextBlock x:Name="MediaQuestionTextBlock" Text="{Binding QuestionText}" 
+                                                FontSize="{Binding QuestionTextFontSize}" Foreground="White" TextWrapping="Wrap" Padding="20,0,0,0" />
+                                        </Border>
                                     </Border>
-
+                                    <Border Grid.Column="1" CornerRadius="0,15,15,0"  Background="{StaticResource SexDarkBrush}" >
+                                        <Border Style="{StaticResource CentredTextBorder}" Padding="10,10">
+                                            <TextBlock x:Name="MediaQuestiofnTextBlock" FontSize="{Binding ElementName=MainWD, Path=AnswerTimeFontSize}" Text="{Binding ElementName=MainWD, Path=AnswerTimerText}" 
+                                                Style="{StaticResource CentredTextBlock}" Foreground="White" />
+                                        </Border>
+                                    </Border>
+                                    
                                 </Grid>
-                            </Border>
+                                <Border DockPanel.Dock="Bottom" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="0,0,0,20">
+                                    <Grid VerticalAlignment="Top" HorizontalAlignment="Center">
+                                        <Border Background="{StaticResource SexLightDarkBrush}" Padding="15,15" CornerRadius="15">
+                                            <Grid>
+                                                <Image x:Name="QuestionImage" />
+                                                <MediaElement Visibility="Hidden" x:Name="MediaBlock" Stretch="Uniform" />
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
 
-                            <!--#endregion-->
-                            
-                        </Grid>
-                    </Border>
 
 
                 </Grid>
             </Grid>
 
             <!--#endregion-->
-            
+
         </Grid>
     </Grid>
 </Window>

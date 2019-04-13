@@ -40,11 +40,11 @@ namespace Quiz.Support
         {
             int buttonIndex = connector.GetButtonClick();
             if (buttonIndex == -1) {
-                Extensions.ExecuteInApplicationThread(() => OnPlayerDisable?.Invoke());
+                Extensions.ExcecuteWithAppIdleDispatcher(() => OnPlayerDisable?.Invoke());
             } else if (buttonIndex == -2) {
                 return;
             } else {
-                Extensions.ExecuteInApplicationThread(() => OnPlayerRegistrated?.Invoke(buttonIndex));
+                Extensions.ExcecuteWithAppIdleDispatcher(() => OnPlayerRegistrated?.Invoke(buttonIndex));
             }
         }
     }

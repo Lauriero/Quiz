@@ -10,9 +10,7 @@
                 <ResourceDictionary x:Name="MinimizeIcon" Source="Resources/Images/MinimizeIcon.xaml"/>
 
                 <ResourceDictionary x:Name="AddPlayer" Source="Resources/Images/AddPlayer.xaml" />
-                <ResourceDictionary x:Name="WiFi" Source="Resources/Images/WiFi.xaml" />
-
-                <ResourceDictionary x:Name="WiFiDisconnect" Source="Resources/Images/WiFiDisconnected.xaml" />
+                <ResourceDictionary x:Name="Module" Source="Resources/Images/Module.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -1,0 +1,1 @@
+﻿SELECT Questions.Id, QuestionText, Points, TimeToAnswer, RightAnswer, ImagePath, IsImagePathRelative, VideoPath, IsVideoPathRelative, AnswerText, AnswerSign FROM Questions LEFT JOIN Answers ON Questions.Id = Answers.Id AND Questions.RoundId = Answers.RoundId WHERE Questions.RoundId = 1

@@ -10,8 +10,18 @@ namespace Quiz.Support
 {
     class Extensions
     {
-        public static void ExecuteInApplicationThread(Action action) {
+        public static void ExcecuteWithAppIdleDispatcher(Action action)
+        {
             Application.Current.Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle);
+        }
+
+        /// <summary>
+        /// Using with timers
+        /// </summary>
+        /// <param name="action"></param>
+        public static void ExecuteWithNormalDispatcher(Action action)
+        {
+            Application.Current.Dispatcher.BeginInvoke(action, DispatcherPriority.Normal);
         }
     }
 }

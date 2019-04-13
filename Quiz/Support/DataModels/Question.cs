@@ -8,13 +8,14 @@ namespace Quiz.Support.DataModels
 {
     class Question
     {
-        public string id { get; set; }
-        public int points { get; set; }
-        public int timeToAnswer { get; set; }
-        public string questionText { get; set; }
-        public List<Answer> answers { get; set; }
-        public string videoPath { get; set; }
-        public bool isVideoPathRelative { get; set; }
+        public int Points { get; set; }
+        public int TimeToAnswer { get; set; }
+        public string QuestionText { get; set; }
+        public string RightAnswer { get; set; }
+        public List<Answer> Answers { get; set; }
+        public Uri VideoPath { get; set; }
+        public Uri ImagePath { get; set; }
+        public bool IsImagePathRelative { get; set; }
 
     }
 }

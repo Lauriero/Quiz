@@ -4,13 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Web;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace Quiz
@@ -47,6 +50,21 @@ namespace Quiz
                 OnPropertyChanged("QuestionText");
             }
         }
+        public string AnswerTimerText {
+            get { return _questionAnswerTime; }
+            set {
+                if (!isTimerStarted) {
+                    _questionAnswerTime = string.Format(":{0}", value);
+                    AnswerTimeFontSize = 33;
+                } else {
+                    AnswerTimeFontSize = 26;
+                    _questionAnswerTime = value;
+                }
+
+                OnPropertyChanged("AnswerTimeFontSize");
+                OnPropertyChanged("AnswerTimerText");
+            }
+        }
         public int QuestionNumberFontSize {
             get { return _questionNumberFontSize; }
             set {
@@ -59,6 +77,13 @@ namespace Quiz
             set {
                 _questionTextFontSize = value;
                 OnPropertyChanged("QuestionTextFontSize");
+            }
+        }
+        public int AnswerTimeFontSize {
+            get { return _answerTimeFontSize; }
+            set {
+                _answerTimeFontSize = value;
+                OnPropertyChanged("AnswerTimeFontSize");
             }
         }
         public Thickness PlayerNameMargin
@@ -88,19 +113,31 @@ namespace Quiz
         private int registratingPlayerCounter = 0;
         private int activePlayer = -1;
         private int maxPoint = 20;
-        private int WiFiStatus = 0;
 
         private bool isRegistrationActive = false;
+        private bool isModuleConnect = false;
+        private bool isBlackerShowen = true;
+        private bool isQuizStarted = false;
+        private bool isTimerStarted = false;
+        private bool isPlayerAnswering = false;
+        private bool isVideoPlay = false;
+        private bool isVideoQuestion = false;
+    
 
         private double pointBarWidthStep = 0;
         private double pointBarsContainerWidth = 0;
         private double playersNameContainerHeight = 0;
+
         private double _playerBarHeight;
         private int _questionNumber;
         private int _questionNumberFontSize;
         private int _questionTextFontSize;
+        private int _answerTimeFontSize;
         private string _questionString;
+        private string _questionAnswerTime;
         private Thickness _playerNameMargin;
+        private TimeSpan _answersTime;
+        private Timer _answerSecondsTimer;
 
         private ButtonModuleConnector buttonConnector;
         private RegistrationManager registrationManager;
@@ -126,6 +163,7 @@ namespace Quiz
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             buttonConnector = new ButtonModuleConnector();
+            buttonConnector.OnModuleConnectionChange += ButtonConnector_OnModuleConnectionChange;
             buttonConnector.Init("COM4");
 
             registrationManager = new RegistrationManager();
@@ -133,43 +171,25 @@ namespace Quiz
             registrationManager.OnPlayerDisable += RegistrationManager_OnPlayerDisable;
             registrationManager.OnPlayerRegistrated += RegistrationManager_OnPlayerRegistrated;
 
-            List<Question> questions = new List<Question>();
-            Question q1 = new Question();
-            Question q2 = new Question();
-            Question q3 = new Question();
-            q1.questionText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus eros sapien, malesuada nec congue vel, feugiat id nisi. Vivamus id ex pulvinar, varius purus eget, tristique leo. Mauris interdum, sem eu hendrerit accumsan, dolor dui interdum tortor, in posuere velit turpis ut libero. Nam sodales hendrerit orci ut laoreet. Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
-            q1.points = 10;
-            q1.timeToAnswer = 20;
-            q1.videoPath = "Question1.mp4";
-            q1.isVideoPathRelative = true;
-            q2.questionText = "Сколько длилась блокада.";
-            q2.points = 10;
-            q2.timeToAnswer = 20;
-            q2.videoPath = null;
-            q2.isVideoPathRelative = true;
-            q3.questionText = "Dolor dui interdum tortor, in posuere velit turpis ut libero. Nam sodales hendrerit orci ut laoreet. Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
-            q3.points = 10;
-            q3.timeToAnswer = 20;
-            q3.videoPath = null;
-            q3.isVideoPathRelative = true;
-            questions.Add(q1);questions.Add(q2);questions.Add(q3);
+            DataBaseWorker questionsBaseworker = new DataBaseWorker();
+            questionsBaseworker.Init(1, 0);
 
             quizManager = new QuizManager();
             quizManager.OnNewQuestion += QuizManager_OnNewQuestion;
             quizManager.OnPlayerButtonClicked += QuizManager_OnPlayerButtonClicked;
             quizManager.OnRightAnswer += QuizManager_OnRightAnswer;
             quizManager.OnWrongAnswer += QuizManager_OnWrongAnswer;
-            quizManager.Init(questions, buttonConnector);
+            quizManager.Init(questionsBaseworker.GetQuestions(), buttonConnector);
 
             AddPlayer();
             AddPlayer();
-
-            Players[0].ChangeStatus(1);
 
             MediaBlock.LoadedBehavior = MediaState.Manual;
             MediaBlock.UnloadedBehavior = MediaState.Manual;
             MediaBlock.Volume = 0.5f;
         }
+
+
 
         #region PlayersSupportMethods
 
@@ -183,14 +203,14 @@ namespace Quiz
             }
 
             if (playersCount < defaultColors.Count) {
-                Players.Add(new Player(string.Format("Игрок {0}", playersCount + 1), defaultColors[playersCount], playersCount));
+                Players.Add(new Player(string.Format("Игрок {0}", playersCount + 1), defaultColors[playersCount], playersCount, pointBarsContainerWidth / maxPoint));
             } else {
-                Players.Add(new Player(string.Format("Игрок {0}", playersCount + 1), Color.FromRgb(48, 59, 63), playersCount));
+                Players.Add(new Player(string.Format("Игрок {0}", playersCount + 1), Color.FromRgb(48, 59, 63), playersCount, pointBarsContainerWidth / maxPoint));
             }
 
-            if (!isRegistrationActive) {
+            if (!isRegistrationActive && isModuleConnect) {
                 isRegistrationActive = true;
-                Players.Last().ChangeStatus(1);
+                Players.Last().ChangeStatus(PlayerStatus.Registrating);
                 registrationManager.RegisterNext();
             }
 
@@ -232,19 +252,57 @@ namespace Quiz
 
         #region SupportEventsListeners
 
+        private void ButtonConnector_OnModuleConnectionChange(ModuleStatus status)
+        {
+            ResourceDictionary dict = new ResourceDictionary();
+            dict.Source = new Uri("Resources/Images/Module.xaml", UriKind.Relative);
+
+            switch (status) {
+                case ModuleStatus.Disconnected:
+                    {
+                        isModuleConnect = false;
+                        isRegistrationActive = false;
+                        registrationManager.StopManager();
+
+                        dict["BranchesColor"] = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
+                        break;
+                    }
+                case ModuleStatus.Connected:
+                    {
+                        isModuleConnect = true;
+                        registratingPlayerCounter = Players.Where(p => p.Status == PlayerStatus.Disable).First().PlayerIndex;
+                        if (Players.Count > registratingPlayerCounter && !isRegistrationActive) {
+                            Players[registratingPlayerCounter].ChangeStatus(PlayerStatus.Registrating);
+                            isRegistrationActive = true;
+                            registrationManager.RegisterNext();
+                        }
+
+                        dict["BranchesColor"] = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+                        break;
+                    }
+            }
+
+            Application.Current.Resources.MergedDictionaries[3] = dict;
+        }
+
         /// <summary>
         /// Invoke when player button successfully registrate
         /// </summary>
         /// <param name="buttonIndex">Index of player button</param>
         private void RegistrationManager_OnPlayerRegistrated(int buttonIndex)
         {
-            Players[registratingPlayerCounter].ChangeStatus(2);
+            if (Players.Where(p => p.ButtonIndex == buttonIndex).ToArray().Count() > 0) {
+                registrationManager.RegisterNext();
+                return;
+            }
+
+            Players[registratingPlayerCounter].ChangeStatus(PlayerStatus.Registered);
             Players[registratingPlayerCounter].ButtonIndex = buttonIndex;
 
             registratingPlayerCounter++;
 
             if (registratingPlayerCounter < Players.Count) {
-                Players[registratingPlayerCounter].ChangeStatus(1);         
+                Players[registratingPlayerCounter].ChangeStatus(PlayerStatus.Registrating);
                 registrationManager.RegisterNext();
             } else {
                 isRegistrationActive = false;
@@ -256,12 +314,12 @@ namespace Quiz
         /// </summary>
         private void RegistrationManager_OnPlayerDisable()
         {
-            Players[registratingPlayerCounter].ChangeStatus(0);
+            Players[registratingPlayerCounter].ChangeStatus(PlayerStatus.Disable);
 
             registratingPlayerCounter++;
 
             if (registratingPlayerCounter < Players.Count) {
-                Players[registratingPlayerCounter].ChangeStatus(1);
+                Players[registratingPlayerCounter].ChangeStatus(PlayerStatus.Registrating);
                 registrationManager.RegisterNext();
             } else {
                 isRegistrationActive = false;
@@ -273,7 +331,10 @@ namespace Quiz
         /// </summary>
         private void QuizManager_OnWrongAnswer()
         {
-            activePlayer = -1;
+            Players[activePlayer].ChangeStatus(PlayerStatus.Registered);
+            isPlayerAnswering = false;
+
+            ShowImage();
         }
 
         /// <summary>
@@ -282,55 +343,87 @@ namespace Quiz
         /// <param name="points"></param>
         private void QuizManager_OnRightAnswer(int points)
         {
-            if (activePlayer >= 0) {
-                AddPoints(activePlayer, points);
+            AddPoints(activePlayer, points);
+            Players[activePlayer].ChangeStatus(PlayerStatus.Registered);
+
+            foreach (Player p in Players) {
+                p.AnswerTime = "";
+                p.isAnswered = false;
             }
+            isPlayerAnswering = false;
         }
 
         /// <summary>
         /// Invoke when player's button clicked
         /// </summary>
         /// <param name="buttonIndex">Index of clicked button</param>
-        private void QuizManager_OnPlayerButtonClicked(int buttonIndex)
+        private void QuizManager_OnPlayerButtonClicked(int buttonIndex, int points)
         {
-            activePlayer = Players.Where(p => p.ButtonIndex == buttonIndex).ToList()[0].PlayerIndex;
+            if (Players.Where(p => p.ButtonIndex == buttonIndex).ToArray()[0].isAnswered) {
+                quizManager.WrongAnswerClick();
+                quizManager.StartButtonListener();
+                StartTimer();
+                return;
+            }
+
+            HideImage();
+            _answerSecondsTimer.Change(Timeout.Infinite, 0);
+            isTimerStarted = false;
+            isPlayerAnswering = true;
+
+            activePlayer = Players.Where(p => p.ButtonIndex == buttonIndex).ToArray()[0].PlayerIndex;
+            Players[activePlayer].ChangeStatus(PlayerStatus.Answering, points, (long)_answersTime.TotalMilliseconds);
+            Players[activePlayer].isAnswered = true;
         }
 
         /// <summary>
         /// Invoke when manager starts new question
         /// </summary>
         /// <param name="text">Text of question</param>
+        /// <param name="secondsToAnswer">Time in seconds to answer</param>
         /// <param name="kind">Type of question</param>
         /// <param name="answers">List of answers</param>
-        /// <param name="videoPath">Path to video for question</param>
-        /// <param name="isVideoPathRelative">Reletive path to video or not</param>
-        private void QuizManager_OnNewQuestion(string text, QuestionKind kind, List<Answer> answers, string videoPath, bool isVideoPathRelative)
+        /// <param name="mediaPath">Path to video or picture for question</param>
+        private void QuizManager_OnNewQuestion(string text, int secondsToAnswer, QuestionKind kind, List<Answer> answers, Uri mediaPath)
         {
             switch (kind) {
                 case QuestionKind.WithVideo:
                     {
-                        if (isVideoPathRelative) {
-                            MediaBlock.Source = new Uri(System.IO.Path.Combine(Environment.CurrentDirectory, videoPath));
-                        } else {
-                            MediaBlock.Source = new Uri(videoPath);
-                        }
+                        ShowBlacker();
+                        QuestionImage.Visibility = Visibility.Collapsed;
+                        MediaGrid.Visibility = Visibility.Visible;
+                        MediaBorder.Padding = new Thickness(200, 30, 200, 0);
+                        MediaBlock.Source = mediaPath;
                         MediaBlock.Visibility = Visibility.Visible;
-                        PointBarsContainer.Visibility = Visibility.Hidden;
                         MediaBlock.Play();
-
+                        isVideoQuestion = true;
+                        isVideoPlay = true;
+                        break;
+                    }
+                case QuestionKind.WithImage:
+                    {
+                        ShowBlacker();
+                        MediaBlock.Stop();
+                        QuestionImage.Source = new BitmapImage(mediaPath);
+                        MediaGrid.Visibility = Visibility.Visible;
+                        MediaBlock.Visibility = Visibility.Hidden;
+                        PointBarsContainer.Visibility = Visibility.Visible;
+                        isVideoQuestion = false;
                         break;
                     }
                 case QuestionKind.Simple:
                     {
+                        HideBlacker();
                         MediaBlock.Stop();
                         MediaBlock.Visibility = Visibility.Hidden;
                         PointBarsContainer.Visibility = Visibility.Visible;
+                        isVideoQuestion = false;
                         break;
                     }
             }
-       
+
             QuestionNumberFontSize = 33 - ((int)Math.Log10(QuestionNumber) + 1) * 2;
-            if (text.Count() < 93) { 
+            if (text.Count() < 93) {
                 QuestionTextBlock.VerticalAlignment = VerticalAlignment.Center;
             }
             else if (text.Count() < 185) {
@@ -341,6 +434,8 @@ namespace Quiz
                 text = text.Substring(0, 182) + "...";
             }
             QuestionText = text;
+            AnswerTimerText = secondsToAnswer.ToString();
+            _answersTime = TimeSpan.FromSeconds(secondsToAnswer);
 
             QuestionNumber++;
         }
@@ -363,6 +458,94 @@ namespace Quiz
             DataTemplate template = cp.ContentTemplate;
 
             return template.FindName(elementName, cp) as T;
+        }
+
+        #region Blacker Methods
+        private void ShowBlacker() {
+            if (isBlackerShowen) { return; }
+
+            ColorAnimation blackerAnimation = new ColorAnimation();
+            blackerAnimation.From = Color.FromArgb(0, 0, 0, 0);
+            blackerAnimation.To = Color.FromArgb(174, 0, 0, 0);
+            blackerAnimation.Duration = TimeSpan.FromMilliseconds(300);
+            blackerAnimation.AccelerationRatio = 0.6;
+
+            (Blacker.Background as SolidColorBrush).BeginAnimation(SolidColorBrush.ColorProperty, blackerAnimation);
+
+            isBlackerShowen = true;
+        }
+
+        private void HideBlacker() {
+            if (!isBlackerShowen) { return; }
+
+            ColorAnimation blackerAnimation = new ColorAnimation();
+            blackerAnimation.From = (Blacker.Background as SolidColorBrush).Color;
+            blackerAnimation.To = Color.FromArgb(0, 0, 0, 0);
+            blackerAnimation.Duration = TimeSpan.FromMilliseconds(300);
+            blackerAnimation.AccelerationRatio = 0.6;
+
+            (Blacker.Background as SolidColorBrush).BeginAnimation(SolidColorBrush.ColorProperty, blackerAnimation);
+
+            isBlackerShowen = false;
+        }
+        #endregion
+
+        #region AnswerTimerArea
+        private void StartTimer()
+        {
+            if (isTimerStarted || isPlayerAnswering) { return; }
+            isTimerStarted = true;
+            _answerSecondsTimer = new Timer(SecondsTimerCallback, null, 0, 71);
+        }
+
+        private void SecondsTimerCallback(object o)
+        {
+            try {
+                Extensions.ExecuteWithNormalDispatcher(() => {
+                    _answersTime = TimeSpan.FromMilliseconds(_answersTime.TotalMilliseconds - 71);
+                    AnswerTimerText = _answersTime.ToString(@"mm\:ss\:ff");
+
+                    if (_answersTime.TotalMilliseconds <= 71)
+                    {
+                        _answerSecondsTimer.Change(Timeout.Infinite, 0);
+                        AnswerTimerText = "00:00:00";
+                        Timer flickTimer = new Timer(TimeFlick, null, 0, 300);
+                        Thread thread = new Thread(() => {
+                            Thread.Sleep(3000);
+                            Extensions.ExecuteWithNormalDispatcher(() => {
+                                flickTimer.Change(Timeout.Infinite, 0);
+                                TimeBlock.Visibility = Visibility.Visible;
+                            });
+                            isTimerStarted = false;
+                        });
+
+                    }
+                });
+            } catch { }
+        }
+        
+        private void TimeFlick(object o)
+        {
+            Extensions.ExecuteWithNormalDispatcher(() => {
+                if (TimeBlock.Visibility == Visibility.Visible) {
+                    TimeBlock.Visibility = Visibility.Hidden;
+                } else {
+                    TimeBlock.Visibility = Visibility.Visible;
+                }
+            });
+        }
+        #endregion
+
+        private void ShowImage()
+        {
+            MediaGrid.Visibility = Visibility.Visible;
+            ShowBlacker();
+        }
+
+        private void HideImage()
+        {
+            MediaGrid.Visibility = Visibility.Hidden;
+            HideBlacker();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -396,19 +579,13 @@ namespace Quiz
 
         private void StartButton_MouseUp(object sender, MouseButtonEventArgs e)
         {
-            ColorAnimation blackerAnimation = new ColorAnimation();
-            blackerAnimation.From = (blacker.Background as SolidColorBrush).Color;
-            blackerAnimation.To = Color.FromArgb(0, 0, 0, 0);
-            blackerAnimation.Duration = TimeSpan.FromMilliseconds(300);
-            blackerAnimation.AccelerationRatio = 0.6;
-
             DoubleAnimation settingsHeightAnimation = new DoubleAnimation();
             settingsHeightAnimation.From = SettingsBorder.ActualHeight;
             settingsHeightAnimation.To = 0;
             settingsHeightAnimation.Duration = TimeSpan.FromMilliseconds(100);
             settingsHeightAnimation.AccelerationRatio = 0.3;
 
-            (blacker.Background as SolidColorBrush).BeginAnimation(SolidColorBrush.ColorProperty, blackerAnimation);
+            HideBlacker();
             SettingsBorder.BeginAnimation(HeightProperty, settingsHeightAnimation);
 
             registrationManager.StopManager();
@@ -421,15 +598,18 @@ namespace Quiz
                 Thread.Sleep(1000);
                 foreach (Player p in Players) {
                     if (p.ButtonIndex == -1) {
-                        Extensions.ExecuteInApplicationThread(() => {
+                        Extensions.ExcecuteWithAppIdleDispatcher(() => {
                             Players.Remove(p);
                         });
                     }
                 }
             });
-
             thread.Start();
 
+            if (!isQuizStarted) {
+                quizManager.StartQuiz();
+                isQuizStarted = true;
+            }
         } 
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
@@ -438,19 +618,13 @@ namespace Quiz
 
             AddPlayerBtn.Visibility = Visibility.Collapsed;
 
-            ColorAnimation blackerAnimation = new ColorAnimation();
-            blackerAnimation.From = Color.FromArgb(0, 0, 0, 0);
-            blackerAnimation.To = Color.FromArgb(174, 0, 0, 0);
-            blackerAnimation.Duration = TimeSpan.FromMilliseconds(300);
-            blackerAnimation.AccelerationRatio = 0.6;
-
             DoubleAnimation settingsHeightAnimation = new DoubleAnimation();
             settingsHeightAnimation.From = 0;
             settingsHeightAnimation.To = (SystemParameters.PrimaryScreenHeight - 30) / 2 ;
             settingsHeightAnimation.Duration = TimeSpan.FromMilliseconds(100);
             settingsHeightAnimation.AccelerationRatio = 0.3;
 
-            (blacker.Background as SolidColorBrush).BeginAnimation(SolidColorBrush.ColorProperty, blackerAnimation);
+            ShowBlacker();
             SettingsBorder.BeginAnimation(HeightProperty, settingsHeightAnimation);
 
             StartButton.Text = "Продолжить";
@@ -459,6 +633,24 @@ namespace Quiz
 
         private void Window_KeyUp(object sender, KeyEventArgs e)
         {
+            switch (e.Key) {
+                case Key.P:
+                    {
+                        if (isVideoQuestion) {
+                            if (isVideoPlay) {
+                                MediaBlock.Pause();
+                            } else {
+                                MediaBlock.Play();
+                            }
+
+                            isVideoPlay = !isVideoPlay;
+                        }
+                        break;
+                    }
+            }
+
+            if (!isQuizStarted) { return; }
+
             switch (e.Key) {
                 case Key.Y:
                     {
@@ -472,7 +664,13 @@ namespace Quiz
                     }
                 case Key.S:
                     {
-                        quizManager.StartClick();
+                        quizManager.StartButtonListener();
+                        StartTimer();
+                        break;
+                    }
+                case Key.A:
+                    {
+                        quizManager.Click();
                         break;
                     }
             }

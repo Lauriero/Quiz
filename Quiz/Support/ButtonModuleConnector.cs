@@ -15,28 +15,33 @@ namespace Quiz.Support
     {
         private const int PORT_BAUD_RATE = 9600;
 
-        public string PortName { get; set; }
-
+        private string portName;
+        private bool isConnectorActive = true;
         private SerialPort modulePort;
 
-        private bool isConnectorActive = true;
+        private ModuleStatus status = ModuleStatus.Disconnected;
+
+        public event Action<ModuleStatus> OnModuleConnectionChange;
 
         public void Init(string portName)
         {
-            PortName = portName;
-
-            modulePort = new SerialPort(portName, PORT_BAUD_RATE);
+            modulePort = new SerialPort(portName);
+            modulePort.BaudRate = PORT_BAUD_RATE;
             modulePort.DtrEnable = true;
             modulePort.ReadTimeout = 100;
-            
-            try {
-                modulePort.Open();
-            } catch { }
+
+            this.portName = portName;
+
+            Thread watchDogThread = new Thread(WatchDog);
+            watchDogThread.Start();
         }
 
         public int GetButtonClick()
         {
             isConnectorActive = true;
+            try {
+                modulePort.DiscardInBuffer();
+            } catch { }
 
             int incomingByte;
             while (isConnectorActive) {
@@ -58,5 +63,36 @@ namespace Quiz.Support
         public void AbortListener() {
             isConnectorActive = false;
         }
+
+        public void WatchDog() {
+            while (true) {
+                CheckPort();
+                Thread.Sleep(3000);
+            }
+        }
+
+        private void CheckPort()
+        {
+            try {
+                if (!modulePort.IsOpen) {
+                    modulePort.Open();
+                }
+
+                if (status == ModuleStatus.Disconnected) {
+                    status = ModuleStatus.Connected;
+                    Extensions.ExcecuteWithAppIdleDispatcher(() => OnModuleConnectionChange?.Invoke(ModuleStatus.Connected));
+                }
+            } catch {
+                if (status == ModuleStatus.Connected) {
+                    status = ModuleStatus.Disconnected;
+                    Extensions.ExcecuteWithAppIdleDispatcher(() => OnModuleConnectionChange?.Invoke(ModuleStatus.Disconnected));
+                }
+            }
+        }
+    }
+
+    public enum ModuleStatus {
+        Connected,
+        Disconnected
     }
 }

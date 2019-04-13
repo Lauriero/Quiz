@@ -1,0 +1,2 @@
+﻿INSERT INTO Questions (Id, RoundId, QuestionText, Points, TimeToAnswer, RightAnswer, ImagePath, IsImagePathRelative, VideoPath, IsVideoPathRelative) VALUES (1, 1, N'Сколько длилась блокада Ленинграда', 2, 15, N'872 дня', N'WW2.2.png', 1, N'', 0)
+INSERT INTO Questions (Id, RoundId, QuestionText, Points, TimeToAnswer, RightAnswer, ImagePath, IsImagePathRelative, VideoPath, IsVideoPathRelative) VALUES (2, 1, N'Кто написал повесть Судьба человека', 5, 10, N'Шолохов', N'', 0, N'Question1.mp4', 1)
