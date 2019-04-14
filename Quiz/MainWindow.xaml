@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:Quiz"
         x:Name="MainWD"
         mc:Ignorable="d"
@@ -275,7 +276,7 @@
                 <!--Setting field-->
                 <Grid x:Name="Blacker" Background="#AE000000" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 
-                    <Grid Visibility="Visible">
+                    <Grid Visibility="Collapsed">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="0.9*" />
                             <RowDefinition Height="2*" />
@@ -292,8 +293,7 @@
                                 </Grid.RowDefinitions>
 
                                 <!--#region SettingsBar-->
-
-                                <Border  Grid.Row="0" x:Name="SettingsBar" CornerRadius="23,23,0,0" Background="{StaticResource SexDarkBrush}" Padding="15,0,0,0" Margin="0">
+                                <Border  Grid.Row="0" x:Name="SettingsBar" CornerRadius="23,23,0,0" Background="{StaticResource SexDarkBrush}" Padding="15,0,0,0" Margin="0" MouseUp="SettingsBar_MouseUp">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
                                         <Border Padding="0,4,0,4">
                                             <Grid>
@@ -340,46 +340,73 @@
                                         </Border>
                                     </StackPanel>
                                 </Border>
-
                                 <!--#endregion-->
 
-                                <!--#region PlayersInfo-->
+                                <!--#region MainData-->
+                                <Grid Grid.Row="1" Background="{StaticResource SexLightDarkBrush}">
+                                    
+                                    <!--#region PlayersInfo-->
+                                    <Border Grid.Row="1" x:Name="PlayersPanel" Visibility="Visible">
+                                        <ItemsControl Background="Transparent"
+                                        BorderThickness="0"
+                                        HorizontalAlignment="Stretch"
+                                        Padding="0" x:Name="PlayerSettingsContainer"
+                                        ItemsSource="{Binding  Players}"
+                                        HorizontalContentAlignment="Stretch">
 
-                                <Border Grid.Row="1" x:Name="PlayersPanel" Background="#363940">
-                                    <ItemsControl Background="Transparent"
-                                    BorderThickness="0"
-                                    HorizontalAlignment="Stretch"
-                                    Padding="0" x:Name="PlayerSettingsContainer"
-                                    ItemsSource="{Binding  Players}"
-                                    HorizontalContentAlignment="Stretch">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Vertical" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
 
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <StackPanel Orientation="Vertical" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <DockPanel Background="#707070">
+                                                        <Border Padding="0,0,0,1">
+                                                            <Border Background="{Binding Path=PlayerBrush}" Padding="0,6,0,6">
+                                                                <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
+                                                                    <TextBox x:Name="PlayersSettingsBox"
+                                                                        materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"
+                                                                        Padding="6,0,0,0" Text="{Binding Path=Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                                        FontSize="33" Foreground="White" FontFamily="Bebas Neue Bold" 
+                                                                        BorderThickness="0" Background="Transparent" />
 
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <DockPanel Background="#707070">
-                                                    <Border Padding="0,0,0,1">
-                                                        <Border Background="{Binding Path=PlayerBrush}" Padding="0,6,0,6">
-                                                            <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
-                                                                <TextBox x:Name="PlayersSettingsBox" 
-                                                                Padding="10,0,0,0" Text="{Binding Path=Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                                                FontSize="33" Foreground="White" FontFamily="Bebas Neue Bold" 
-                                                                BorderThickness="0" Background="Transparent" />
-
-                                                                <TextBlock Text="{Binding Path=PlayerIndex}" Visibility="Collapsed" />
-                                                            </StackPanel>
+                                                                    <TextBlock Text="{Binding Path=PlayerIndex}" Visibility="Collapsed" />
+                                                                </StackPanel>
+                                                            </Border>
                                                         </Border>
-                                                    </Border>
-                                                </DockPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Border>
+                                                    </DockPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Border>
+                                    <!--#endregion-->
 
+                                    <!--#region Settings-->
+                                    <Border x:Name="SettingsPanel" Visibility="Hidden">
+                                        <ItemsControl Padding="0,30,0,0" VerticalContentAlignment="Stretch">
+                                            <StackPanel Orientation="Horizontal" Margin="20,0,10,60">
+                                                <TextBlock Text="Последовательный порт" Foreground="White" FontSize="27"  />
+                                                <ComboBox x:Name="SerialBox" Margin="20,4,0,0" Foreground="White" FontSize="16" SelectionChanged="SerialBox_SelectionChanged" ItemsSource="{Binding SerialPorts}" />
+                                            </StackPanel>
+                                            <Button x:Name="ResPointsBtn" Height="{Binding}" Background="#FF2D00" HorizontalAlignment="Stretch" Margin="40,0,40,10" FontSize="29" BorderThickness="0" Click="ResPointsBtn_Click">
+                                                <TextBlock Text="Reset Players Points" FontSize="24" />
+                                            </Button>
+                                            <Button x:Name="DelPlayersBtn" Height="{Binding}" Background="#FF2D00" HorizontalAlignment="Stretch" Margin="40,0,40,10" FontSize="29" BorderThickness="0" Click="DelPlayersBtn_Click">
+                                                <TextBlock Text="Delete Players Info" FontSize="24" />
+                                            </Button>
+                                            <Button x:Name="DelQuestionBtn" Height="{Binding}" Background="#FF2D00" HorizontalAlignment="Stretch" Margin="40,0,40,10" FontSize="29" BorderThickness="0" Click="DelQuestionBtn_Click">
+                                                <TextBlock Text="Delete Question Info" FontSize="24" />
+                                            </Button>
+                                            <Button x:Name="DelAllBtn" Height="{Binding}" Background="#FF2D00" HorizontalAlignment="Stretch" Margin="40,0,40,10" FontSize="29" BorderThickness="0" Click="DelAllBtn_Click">
+                                                <TextBlock Text="Delete All Cache" FontSize="24" />
+                                            </Button>
+                                        </ItemsControl>
+                                    </Border>
+                                    <!--#endregion-->
+
+                                </Grid>
                                 <!--#endregion-->
 
                                 <!--#region Footer-->
@@ -393,11 +420,11 @@
 
                                         <Grid Grid.Column="0" >
                                             <StackPanel Orientation="Horizontal">
-                                                <Border VerticalAlignment="Stretch">
-                                                    <TextBox VerticalAlignment="Center" Text="Тур:" Padding="15,0,0,3" FontSize="17" Background="Transparent" BorderThickness="0" Foreground="White" />
+                                                <Border Style="{StaticResource VerticalCentredTextBorder}">
+                                                    <TextBlock Style="{StaticResource VerticalCentredTextBlock}" Text="Тур:" Padding="15,0,0,3" FontSize="17" Background="Transparent" />
                                                 </Border>
-                                                <Border VerticalAlignment="Stretch">
-                                                    <TextBox VerticalAlignment="Center" Text="{Binding RoundNumber}" Padding="0,0,0,3" FontSize="17" Background="Transparent" BorderThickness="0" Foreground="White" />
+                                                <Border Style="{StaticResource VerticalCentredTextBorder}">
+                                                    <TextBlock Style="{StaticResource VerticalCentredTextBlock}" Text="{Binding RoundNumber}" Padding="0,0,0,3" FontSize="17" Background="Transparent" />
                                                 </Border>
                                             </StackPanel>
                                         </Grid>
@@ -438,7 +465,7 @@
                                                 Style="{StaticResource CentredTextBlock}" Foreground="White" />
                                         </Border>
                                     </Border>
-                                    
+
                                 </Grid>
                                 <Border DockPanel.Dock="Bottom" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="0,0,0,20">
                                     <Grid VerticalAlignment="Top" HorizontalAlignment="Center">
@@ -453,9 +480,8 @@
                             </DockPanel>
                         </Border>
                     </Grid>
-
-
-
+                
+                    
                 </Grid>
             </Grid>
 

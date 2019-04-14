@@ -8,6 +8,7 @@ namespace Quiz.Support.DataModels
 {
     class Question
     {
+        public int Id { get; set; }
         public int Points { get; set; }
         public int TimeToAnswer { get; set; }
         public string QuestionText { get; set; }

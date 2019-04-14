@@ -50,6 +50,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MaterialDesignColors, Version=1.1.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MaterialDesignColors.1.1.2\lib\net45\MaterialDesignColors.dll</HintPath>
+    </Reference>
+    <Reference Include="MaterialDesignThemes.Wpf, Version=2.5.1.1345, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MaterialDesignThemes.2.5.1\lib\net45\MaterialDesignThemes.Wpf.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
@@ -80,6 +86,7 @@
     <Compile Include="Support\DataBaseWorker.cs" />
     <Compile Include="Support\DataModels\Answer.cs" />
     <Compile Include="Support\DataModels\Player.cs" />
+    <Compile Include="Support\DataModels\PlayersInfo.cs" />
     <Compile Include="Support\DataModels\Question.cs" />
     <Compile Include="Support\ButtonModuleConnector.cs" />
     <Compile Include="Support\Extensions.cs" />
@@ -166,11 +173,8 @@
     <Resource Include="Resources\Images\WW2.4.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="QuestionsBase.mdf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <Content Include="QuestionsBase.mdf" />
     <Content Include="QuestionsBase_log.ldf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <DependentUpon>QuestionsBase.mdf</DependentUpon>
     </Content>
   </ItemGroup>

@@ -17,12 +17,10 @@ namespace Quiz.Support
         private ButtonModuleConnector moduleConnector;
 
         private int questionCounter = 0;
-        private int buttonIndexTemp;
         private bool isQuestionAnswered = false;
-        private bool isClickWaiting = false;
         private bool isWrongAnswer = true;
 
-        public event Action<string, int, QuestionKind, List<Answer>, Uri> OnNewQuestion;
+        public event Action<int, string, int, QuestionKind, List<Answer>, Uri> OnNewQuestion;
         public event Action<int> OnRightAnswer;
         public event Action<int, int> OnPlayerButtonClicked;
         public event Action OnWrongAnswer;
@@ -31,11 +29,20 @@ namespace Quiz.Support
         {
             this.questions = questions;
             this.moduleConnector = moduleConnector;
+
+            questionCounter = 0;
+            isQuestionAnswered = false;
+            isWrongAnswer = true;
         }
 
         public void StartQuiz()
         {
             NextQuestion();
+        }
+
+        public void StopQuiz()
+        {
+            moduleConnector.AbortListener();
         }
 
         public void StartButtonListener()
@@ -73,13 +80,13 @@ namespace Quiz.Support
             Question q = questions[questionCounter];
             currentQuestion = q;
             if (q.VideoPath != null) {
-                Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewQuestion?.Invoke(q.QuestionText, q.TimeToAnswer, QuestionKind.WithVideo, null, q.VideoPath));
+                Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewQuestion?.Invoke(q.Id, q.QuestionText, q.TimeToAnswer, QuestionKind.WithVideo, null, q.VideoPath));
             } else if (q.ImagePath != null) {
-                Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewQuestion?.Invoke(q.QuestionText, q.TimeToAnswer, QuestionKind.WithImage, null, q.ImagePath));
+                Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewQuestion?.Invoke(q.Id, q.QuestionText, q.TimeToAnswer, QuestionKind.WithImage, null, q.ImagePath));
             } else if (q.Answers != null) {
-                Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewQuestion?.Invoke(q.QuestionText, q.TimeToAnswer, QuestionKind.WithAnswers, q.Answers, null));
+                Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewQuestion?.Invoke(q.Id, q.QuestionText, q.TimeToAnswer, QuestionKind.WithAnswers, q.Answers, null));
             } else {
-                Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewQuestion?.Invoke(q.QuestionText, q.TimeToAnswer, QuestionKind.Simple, null, null));
+                Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewQuestion?.Invoke(q.Id, q.QuestionText, q.TimeToAnswer, QuestionKind.Simple, null, null));
             }
 
             questionCounter++;

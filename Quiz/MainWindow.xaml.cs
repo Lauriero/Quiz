@@ -28,6 +28,7 @@ namespace Quiz
         #region Public Global Variables
 
         public ObservableCollection<Player> Players { get; set; }
+        public ObservableCollection<string> SerialPorts { get; set; }
         public int RoundNumber { get; set; }
         public double PlayerBarHeight {
             get { return _playerBarHeight; }
@@ -123,7 +124,6 @@ namespace Quiz
         private bool isVideoPlay = false;
         private bool isVideoQuestion = false;
     
-
         private double pointBarWidthStep = 0;
         private double pointBarsContainerWidth = 0;
         private double playersNameContainerHeight = 0;
@@ -139,6 +139,7 @@ namespace Quiz
         private TimeSpan _answersTime;
         private Timer _answerSecondsTimer;
 
+        private DataBaseWorker dbWorker;
         private ButtonModuleConnector buttonConnector;
         private RegistrationManager registrationManager;
         private QuizManager quizManager;
@@ -150,9 +151,13 @@ namespace Quiz
             QuestionTextFontSize = 30;
 
             Players = new ObservableCollection<Player>();
+            SerialPorts = new ObservableCollection<string>();
             this.DataContext = this;
 
             InitializeComponent();
+
+            SerialPorts.Add("COM4");
+            SerialBox.SelectedIndex = 0;
 
             playersNameContainerHeight = (SystemParameters.PrimaryScreenHeight - 25) / 10 * 9;
             pointBarsContainerWidth = SystemParameters.PrimaryScreenWidth / 13.31 * 11 - 15; //-15 - distance between border and bar
@@ -164,48 +169,58 @@ namespace Quiz
         {
             buttonConnector = new ButtonModuleConnector();
             buttonConnector.OnModuleConnectionChange += ButtonConnector_OnModuleConnectionChange;
-            buttonConnector.Init("COM4");
+            buttonConnector.OnNewPortNames += ButtonConnector_OnNewPortNames;
+            buttonConnector.PortName = "COM4";
+            buttonConnector.Init();
 
             registrationManager = new RegistrationManager();
             registrationManager.Init(buttonConnector);
             registrationManager.OnPlayerDisable += RegistrationManager_OnPlayerDisable;
             registrationManager.OnPlayerRegistrated += RegistrationManager_OnPlayerRegistrated;
 
-            DataBaseWorker questionsBaseworker = new DataBaseWorker();
-            questionsBaseworker.Init(1, 0);
+            dbWorker = new DataBaseWorker();
+            dbWorker.Init();
+            QuizInfo playersInfo = dbWorker.GetFullInfo();
+
+            RoundNumber = playersInfo.RoundIndex;
 
             quizManager = new QuizManager();
             quizManager.OnNewQuestion += QuizManager_OnNewQuestion;
             quizManager.OnPlayerButtonClicked += QuizManager_OnPlayerButtonClicked;
             quizManager.OnRightAnswer += QuizManager_OnRightAnswer;
             quizManager.OnWrongAnswer += QuizManager_OnWrongAnswer;
-            quizManager.Init(questionsBaseworker.GetQuestions(), buttonConnector);
+            quizManager.Init(dbWorker.GetQuestions(), buttonConnector);
 
-            AddPlayer();
-            AddPlayer();
+            if (playersInfo.PlayersNames.Count == 0) {
+                AddPlayer();
+                AddPlayer();
+            } else {
+                for (int i = 0; i < playersInfo.PlayersNames.Count; ++i) {
+                    AddPlayer(playersInfo.PlayersNames[i]);
+                    AddPoints(i, playersInfo.PlayersPoints[i]);
+                }
+            }
 
             MediaBlock.LoadedBehavior = MediaState.Manual;
             MediaBlock.UnloadedBehavior = MediaState.Manual;
             MediaBlock.Volume = 0.5f;
         }
 
-
-
         #region PlayersSupportMethods
 
         /// <summary>
         /// Add the new player
         /// </summary>
-        private void AddPlayer() {
+        private void AddPlayer(string playerName = "Игрок {0}") {
 
             if (playersCount == MAX_PLAYERS_COUNT - 1) {
                 AddPlayerBtn.Visibility = Visibility.Collapsed;
             }
 
             if (playersCount < defaultColors.Count) {
-                Players.Add(new Player(string.Format("Игрок {0}", playersCount + 1), defaultColors[playersCount], playersCount, pointBarsContainerWidth / maxPoint));
+                Players.Add(new Player(string.Format(playerName, playersCount + 1), defaultColors[playersCount], playersCount, pointBarsContainerWidth / maxPoint));
             } else {
-                Players.Add(new Player(string.Format("Игрок {0}", playersCount + 1), Color.FromRgb(48, 59, 63), playersCount, pointBarsContainerWidth / maxPoint));
+                Players.Add(new Player(string.Format(playerName, playersCount + 1), Color.FromRgb(48, 59, 63), playersCount, pointBarsContainerWidth / maxPoint));
             }
 
             if (!isRegistrationActive && isModuleConnect) {
@@ -285,6 +300,23 @@ namespace Quiz
             Application.Current.Resources.MergedDictionaries[3] = dict;
         }
 
+        private void ButtonConnector_OnNewPortNames(List<string> names)
+        {
+            if (names.Count >= SerialPorts.Count) {
+                for (int i = 0; i < names.Count; ++i) {
+                    if (i >= SerialPorts.Count) {
+                        SerialPorts.Add(names[i]);
+                    } else if (SerialPorts[i] != names[i]) {
+                        SerialPorts[i] = names[i];
+                    }
+                }
+            } else {
+                for (int i = names.Count; i < SerialPorts.Count; ++i) {
+                    SerialPorts.RemoveAt(i);
+                }
+            }
+        }
+
         /// <summary>
         /// Invoke when player button successfully registrate
         /// </summary>
@@ -343,6 +375,9 @@ namespace Quiz
         /// <param name="points"></param>
         private void QuizManager_OnRightAnswer(int points)
         {
+            Blacker.Height = (SystemParameters.PrimaryScreenHeight - 30) - (playersCount - 1 - activePlayer) * (PlayerBarHeight + 2 * PlayerNameMargin.Top) - PlayerNameMargin.Top - PlayerBarHeight;
+
+
             AddPoints(activePlayer, points);
             Players[activePlayer].ChangeStatus(PlayerStatus.Registered);
 
@@ -351,6 +386,9 @@ namespace Quiz
                 p.isAnswered = false;
             }
             isPlayerAnswering = false;
+
+            dbWorker.UpdatePoints(activePlayer, Players[activePlayer].Points);
+            dbWorker.UpdateCurrentQuestion(QuestionNumber);
         }
 
         /// <summary>
@@ -379,12 +417,13 @@ namespace Quiz
         /// <summary>
         /// Invoke when manager starts new question
         /// </summary>
+        /// <param name="id">Number of question</param>
         /// <param name="text">Text of question</param>
         /// <param name="secondsToAnswer">Time in seconds to answer</param>
         /// <param name="kind">Type of question</param>
         /// <param name="answers">List of answers</param>
         /// <param name="mediaPath">Path to video or picture for question</param>
-        private void QuizManager_OnNewQuestion(string text, int secondsToAnswer, QuestionKind kind, List<Answer> answers, Uri mediaPath)
+        private void QuizManager_OnNewQuestion(int id, string text, int secondsToAnswer, QuestionKind kind, List<Answer> answers, Uri mediaPath)
         {
             switch (kind) {
                 case QuestionKind.WithVideo:
@@ -437,7 +476,7 @@ namespace Quiz
             AnswerTimerText = secondsToAnswer.ToString();
             _answersTime = TimeSpan.FromSeconds(secondsToAnswer);
 
-            QuestionNumber++;
+            QuestionNumber = id;
         }
 
         #endregion
@@ -558,7 +597,8 @@ namespace Quiz
 
         #region ControlsListeners
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e) {
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
             this.Close();
         }
 
@@ -590,12 +630,15 @@ namespace Quiz
 
             registrationManager.StopManager();
 
-            AddPoints(0, 3);
-            AddPoints(1, 5);
-            AddPoints(2, 8);
-
             Thread thread = new Thread(() => {
-                Thread.Sleep(1000);
+                foreach (Player p in Players) {
+                    if (p.ButtonIndex == -1) {
+                        dbWorker.DeletePlayer(p.PlayerIndex);              
+                    } else {
+                        dbWorker.AddOrUpdatePlayerInfo(p.PlayerIndex, p.Name, p.Points);
+                    }
+                }
+
                 foreach (Player p in Players) {
                     if (p.ButtonIndex == -1) {
                         Extensions.ExcecuteWithAppIdleDispatcher(() => {
@@ -631,6 +674,15 @@ namespace Quiz
             FooterGrid.ColumnDefinitions[0].Width = new GridLength(2.1, GridUnitType.Star);
         }
 
+        private void SerialBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                buttonConnector.PortName = (sender as ComboBox).SelectedItem.ToString();
+            }
+            catch { }
+        }
+
         private void Window_KeyUp(object sender, KeyEventArgs e)
         {
             switch (e.Key) {
@@ -644,6 +696,15 @@ namespace Quiz
                             }
 
                             isVideoPlay = !isVideoPlay;
+                        }
+                        break;
+                    }
+                case Key.R:
+                    {
+                        if (isVideoQuestion) {
+                            MediaBlock.Stop();
+                            MediaBlock.Play();
+                            isVideoPlay = true;
                         }
                         break;
                     }
@@ -674,6 +735,60 @@ namespace Quiz
                         break;
                     }
             }
+        }
+
+        private void SettingsBar_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (PlayersPanel.Visibility == Visibility.Hidden) {
+                PlayersPanel.Visibility = Visibility.Visible;
+                SettingsPanel.Visibility = Visibility.Hidden;
+            } else {
+                PlayersPanel.Visibility = Visibility.Hidden;
+                SettingsPanel.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void ResPointsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (Player p in Players) {
+                AddPoints(p.PlayerIndex, -1 * p.Points);
+                dbWorker.UpdatePoints(p.PlayerIndex, 0);
+            }
+        }
+
+        private void DelPlayersBtn_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (Player p in Players.Reverse()) {
+                dbWorker.DeletePlayer(p.PlayerIndex);
+                Players.Remove(p);
+            }
+
+            playersCount = 0;
+        }
+
+        private void DelQuestionBtn_Click(object sender, RoutedEventArgs e)
+        {
+            dbWorker.UpdateCurrentQuestion(0);
+
+            quizManager.StopQuiz();
+            quizManager.Init(dbWorker.GetQuestions(), buttonConnector);
+        }
+
+        private void DelAllBtn_Click(object sender, RoutedEventArgs e)
+        {
+            dbWorker.UpdateCurrentQuestion(0);
+            dbWorker.UpdateCurrentRound(1);
+
+            quizManager.StopQuiz();
+            quizManager.Init(dbWorker.GetQuestions(), buttonConnector);
+
+            foreach (Player p in Players.Reverse()) {
+                dbWorker.DeletePlayer(p.PlayerIndex);
+                Players.Remove(p);
+            }
+
+            playersCount = 0;
+            RoundNumber = 1;
         }
 
         #endregion

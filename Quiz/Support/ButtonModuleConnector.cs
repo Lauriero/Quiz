@@ -15,22 +15,41 @@ namespace Quiz.Support
     {
         private const int PORT_BAUD_RATE = 9600;
 
-        private string portName;
+        public string PortName {
+            get { return _portName; }
+            set {
+                _portName = value;
+                modulePort.PortName = value;
+            }
+        }
+
+        private string _portName;
         private bool isConnectorActive = true;
         private SerialPort modulePort;
+
+        private List<string> portNames;
 
         private ModuleStatus status = ModuleStatus.Disconnected;
 
         public event Action<ModuleStatus> OnModuleConnectionChange;
+        public event Action<List<string>> OnNewPortNames;
 
-        public void Init(string portName)
-        {
-            modulePort = new SerialPort(portName);
+        public ButtonModuleConnector() {
+            modulePort = new SerialPort();
             modulePort.BaudRate = PORT_BAUD_RATE;
             modulePort.DtrEnable = true;
             modulePort.ReadTimeout = 100;
+        }
 
-            this.portName = portName;
+        public void Init()
+        {
+            portNames = new List<string>();
+
+            foreach (string name in SerialPort.GetPortNames()) {
+                portNames.Add(name);
+            }
+
+            OnNewPortNames?.Invoke(portNames);
 
             Thread watchDogThread = new Thread(WatchDog);
             watchDogThread.Start();
@@ -88,6 +107,8 @@ namespace Quiz.Support
                     Extensions.ExcecuteWithAppIdleDispatcher(() => OnModuleConnectionChange?.Invoke(ModuleStatus.Disconnected));
                 }
             }
+
+            Extensions.ExcecuteWithAppIdleDispatcher(() => OnNewPortNames?.Invoke(SerialPort.GetPortNames().ToList()));
         }
     }
 

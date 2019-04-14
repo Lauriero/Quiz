@@ -12,7 +12,9 @@ namespace Quiz.Support
     {
         public static void ExcecuteWithAppIdleDispatcher(Action action)
         {
-            Application.Current.Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle);
+            try {
+                Application.Current.Dispatcher.BeginInvoke(action, DispatcherPriority.ApplicationIdle);
+            } catch { }  
         }
 
         /// <summary>
@@ -21,7 +23,9 @@ namespace Quiz.Support
         /// <param name="action"></param>
         public static void ExecuteWithNormalDispatcher(Action action)
         {
-            Application.Current.Dispatcher.BeginInvoke(action, DispatcherPriority.Normal);
+            try {
+                Application.Current.Dispatcher.BeginInvoke(action, DispatcherPriority.Normal);
+            } catch { }  
         }
     }
 }
