@@ -30,7 +30,7 @@ namespace Quiz.Support.DataModels
                 OnPropertyChanged("AnswerTime");
             }
         }
-        public int Points {
+        public double Points {
             get { return _points; }
             set {
                 _points = value;
@@ -75,7 +75,7 @@ namespace Quiz.Support.DataModels
             }
         }
 
-        private int _points;
+        private double _points;
         private double _extraPointsBlockWidth;
         private string _extraPoints;
         private string _name;
@@ -93,6 +93,11 @@ namespace Quiz.Support.DataModels
 
         private Timer _flickTimer;
         private Timer _flickExtraBartimer;
+
+
+        public Player() {
+
+        }
 
         /// <summary>
         /// Creatre a new player
@@ -127,7 +132,7 @@ namespace Quiz.Support.DataModels
         /// </summary>
         /// <param name="newStatus">Status</param>
         /// <param name="extraPoints">Points when extra points bar shows</param>
-        public void ChangeStatus(PlayerStatus newStatus, int extraPoints = 0, long answerMilliseconds = 0) {  
+        public void ChangeStatus(PlayerStatus newStatus, double extraPoints = 0, long answerMilliseconds = 0) {  
             if (newStatus != PlayerStatus.Answering && Status == PlayerStatus.Answering) {
                 ExtraPointsBlockWidth = 0;
                 ExtraPointsBlockVisibility = Visibility.Collapsed;

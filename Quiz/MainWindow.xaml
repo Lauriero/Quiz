@@ -9,8 +9,7 @@
         mc:Ignorable="d"
         Title="MainWindow" 
         Height="1080" Width="1920" 
-        WindowState="Maximized" WindowStyle="None" 
-        Loaded="Window_Loaded" KeyUp="Window_KeyUp">
+        Loaded="Window_Loaded" KeyUp="Window_KeyUp" WindowState="Maximized" WindowStyle="None">
 
     <Window.Resources>
         <SolidColorBrush x:Key="DarkestBrush" Color="#212226" />
@@ -138,9 +137,9 @@
             <Grid Grid.Row="1">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.31*" />
+                        <ColumnDefinition Width="1.7*" />
                         <ColumnDefinition Width="11*" />
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1.3*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
@@ -200,7 +199,7 @@
                         Style="{StaticResource VerticalCentredTextBorder}" 
                         BorderThickness="0,0,0,2" BorderBrush="{StaticResource DarkestBrush}">
 
-                        <TextBlock x:Name="QuestionTextBlock" Text="{Binding QuestionText}" 
+                        <TextBlock x:Name="QuestionTextBlock" Text="{Binding MainWindowQuestion}" 
                             FontSize="{Binding QuestionTextFontSize}" Foreground="White" TextWrapping="Wrap" Padding="20,0,0,0" />
                     </Border>
 
@@ -276,7 +275,7 @@
                 <!--Setting field-->
                 <Grid x:Name="Blacker" Background="#AE000000" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
 
-                    <Grid Visibility="Collapsed">
+                    <Grid Visibility="Visible" x:Name="MainSettingsGrid">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="0.9*" />
                             <RowDefinition Height="2*" />
@@ -442,8 +441,8 @@
                         </Border>
                     </Grid>
 
-                    <Grid x:Name="MediaGrid" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Visibility="Hidden">
-                        <Border x:Name="MediaBorder" Padding="300,30,300,0">
+                    <Grid x:Name="MediaGrid" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Visibility="Collapsed">
+                        <Border x:Name="MediaBorder" Padding="120,30,120,0">
                             <DockPanel>
                                 <Grid DockPanel.Dock="Top" Margin="0,0,0,45">
                                     <Grid.ColumnDefinitions>
@@ -456,7 +455,7 @@
                                             BorderThickness="0,0,2,0" BorderBrush="{StaticResource DarkestBrush}">
 
                                             <TextBlock x:Name="MediaQuestionTextBlock" Text="{Binding QuestionText}" 
-                                                FontSize="{Binding QuestionTextFontSize}" Foreground="White" TextWrapping="Wrap" Padding="20,0,0,0" />
+                                                FontSize="34" Foreground="White" TextWrapping="Wrap" Padding="20,0,0,0" />
                                         </Border>
                                     </Border>
                                     <Border Grid.Column="1" CornerRadius="0,15,15,0"  Background="{StaticResource SexDarkBrush}" >
@@ -467,10 +466,10 @@
                                     </Border>
 
                                 </Grid>
-                                <Border DockPanel.Dock="Bottom" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="0,0,0,20">
+                                <Border DockPanel.Dock="Bottom" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="0,0,0,20" x:Name="MediaDockPanel">
                                     <Grid VerticalAlignment="Top" HorizontalAlignment="Center">
                                         <Border Background="{StaticResource SexLightDarkBrush}" Padding="15,15" CornerRadius="15">
-                                            <Grid>
+                                            <Grid x:Name="ImageAndVideoGrid">
                                                 <Image x:Name="QuestionImage" />
                                                 <MediaElement Visibility="Hidden" x:Name="MediaBlock" Stretch="Uniform" />
                                             </Grid>
@@ -480,13 +479,72 @@
                             </DockPanel>
                         </Border>
                     </Grid>
-                
-                    
+
+                    <Grid x:Name="RightAnswerGrid" Visibility="Collapsed">
+                        <DockPanel x:Name="RightAnswerDockPanel" Margin="0,20,0,0">
+                            <StackPanel Orientation="Vertical" DockPanel.Dock="Top">
+                                <Grid Margin="0,0,0,45" HorizontalAlignment="Center">
+                                    <Border CornerRadius="15" Padding="80,5" Background="{StaticResource SexLightDarkBrush}">
+                                        <TextBlock Text="{Binding RightAnswer}" FontSize="45" Foreground="White" />
+                                    </Border>
+                                </Grid>
+                                <Grid x:Name="RightAnswerMediaGrid" HorizontalAlignment="Center">
+                                    <Border HorizontalAlignment="Center" CornerRadius="15" Padding="15,15" Background="{StaticResource SexLightDarkBrush}">
+                                        <Grid x:Name="RightMediaInnerGrid">
+                                            <Image />
+                                            <MediaElement x:Name="RightAnswerMediaBlock" Stretch="None" />
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                            
+                            <DockPanel HorizontalAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Bottom" >
+                                <Border Background="{Binding ActivePlayer.PlayerBrush}" Height="{Binding PlayerBarHeight}" Style="{StaticResource CentredTextBorder}" BorderThickness="0" CornerRadius="17,0,0,17" Margin="0,0,10,0">
+                                    <TextBlock Foreground="White" Padding="40,0" Style="{StaticResource CentredTextBlock}" FontSize="60" Text="{Binding ActivePlayer.Name}" FontFamily="/Quiz;component/Resources/Fonts/#Impact" />
+                                </Border>
+                                <Grid Width="0" x:Name="RightPlayerPointsBar">
+                                    <Border Background="{Binding ActivePlayer.PlayerBrush}" Height="{Binding PlayerBarHeight}" Style="{StaticResource VerticalCentredTextBorder}" Padding="30,40,30,40" CornerRadius="0,17,17,0">
+                                        <TextBlock Foreground="White" Style="{StaticResource VerticalCentredTextBlock}" Text="{Binding ActivePlayer.Points}" HorizontalAlignment="Right" FontSize="{Binding ActivePlayerPointsBarFontSize}" FontFamily="/Quiz;component/Resources/Fonts/#Impact" />
+                                    </Border>
+                                </Grid>
+                            </DockPanel>
+                        </DockPanel>
+                    </Grid>
+
+                    <Grid x:Name="AddPointsMenu" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
+                        <Border CornerRadius="15"  Background="{StaticResource SexLightDarkBrush}" >
+                            <Border Padding="0">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <Border Style="{StaticResource VerticalCentredTextBorder}" Padding="20,10,0,10">
+                                            <TextBlock Style="{StaticResource VerticalCentredTextBlock}" Text="Добавить баллов: " FontSize="25" />
+                                        </Border>
+                                        <Border Style="{StaticResource VerticalCentredTextBorder}" Padding="0,10,0,10">
+                                            <TextBox x:Name="AddingPointsTextBlock" Text="1" Foreground="White" FontSize="20" MinWidth="100" Margin="0,6,0,0" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed" BorderThickness="0" FontFamily="/Quiz;component/Resources/Fonts/#Impact"/>
+                                        </Border>
+                                    </DockPanel>
+                                    <DockPanel>
+                                        <Border Padding="20,10" BorderBrush="{StaticResource DarkestBrush}" BorderThickness="0,1,0,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Группе" FontSize="23" Foreground="White" />
+                                                <Border Style="{StaticResource CentredTextBorder}" Background="{Binding ActivePlayer.PlayerBrush}" Padding="10,7" Margin="10,0,0,0">
+                                                    <TextBlock Style="{StaticResource CentredTextBlock}" Text="{Binding ActivePlayer.Name}" FontSize="20" FontFamily="/Quiz;component/Resources/Fonts/#Impact" />
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Grid>
 
             <!--#endregion-->
 
+        </Grid>
+        <Grid> 
+            <MediaElement x:Name="Sound" Source="Resources/sectionpass.mp3" Visibility="Hidden"/>
         </Grid>
     </Grid>
 </Window>

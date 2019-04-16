@@ -85,6 +85,7 @@
     </Compile>
     <Compile Include="Support\DataBaseWorker.cs" />
     <Compile Include="Support\DataModels\Answer.cs" />
+    <Compile Include="Support\DataModels\MediaAnswer.cs" />
     <Compile Include="Support\DataModels\Player.cs" />
     <Compile Include="Support\DataModels\PlayersInfo.cs" />
     <Compile Include="Support\DataModels\Question.cs" />
@@ -177,6 +178,8 @@
     <Content Include="QuestionsBase_log.ldf">
       <DependentUpon>QuestionsBase.mdf</DependentUpon>
     </Content>
+    <EmbeddedResource Include="Resources\sectionpass.mp3" />
+    <Resource Include="Resources\Images\1.4.jpg" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.6.1">

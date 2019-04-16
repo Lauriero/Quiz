@@ -16,6 +16,7 @@ namespace Quiz.Support
     {
         private const string GET_QUESTIONS_COMMAND = "SELECT Questions.Id, QuestionText, Points, TimeToAnswer, RightAnswer, " +
                                                             "ImagePath, IsImagePathRelative, VideoPath, IsVideoPathRelative, " +
+                                                            "AnswerImagePath, IsAnswerImagePathRelative, AnswerVideoPath, IsAnswerVideoPathRelative, " +
                                                             "AnswerText, AnswerSign FROM Questions " +
                                                             "LEFT JOIN Answers ON Questions.Id = Answers.Id AND Questions.RoundId = Answers.RoundId " +
                                                             "WHERE Questions.RoundId = {0} AND Questions.Id > {1}";
@@ -60,7 +61,7 @@ namespace Quiz.Support
                     int currentId = (int)question.ItemArray[0];
 
                     if (lastQuestionId == currentId) {
-                        answers.Add(new Answer(question.ItemArray[10].ToString(), question.ItemArray[9].ToString()));
+                        answers.Add(new Answer(question.ItemArray[14].ToString(), question.ItemArray[13].ToString()));
                     } else {
                         if (answers.Count != 0) {
                             q.Answers = answers;
@@ -68,8 +69,8 @@ namespace Quiz.Support
                         questionsList.Add(q);
 
                         answers = new List<Answer>();
-                        if (!string.IsNullOrEmpty(question.ItemArray[9].ToString())) {
-                            answers.Add(new Answer(question.ItemArray[10].ToString(), question.ItemArray[9].ToString()));
+                        if (!string.IsNullOrEmpty(question.ItemArray[13].ToString())) {
+                            answers.Add(new Answer(question.ItemArray[14].ToString(), question.ItemArray[13].ToString()));
                         }
 
                         q = new Question();
@@ -92,6 +93,22 @@ namespace Quiz.Support
                                 q.VideoPath = new Uri(question.ItemArray[7].ToString(), UriKind.Relative);
                             } else {
                                 q.VideoPath = new Uri(question.ItemArray[7].ToString());
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(question.ItemArray[9].ToString())) {
+                            if ((bool)question.ItemArray[10]) {
+                                q.AnswerImagePath = new Uri(Path.Combine(Environment.CurrentDirectory, question.ItemArray[9].ToString()));
+                            } else {
+                                q.AnswerImagePath = new Uri(question.ItemArray[9].ToString());
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(question.ItemArray[11].ToString())) {
+                            if ((bool)question.ItemArray[12]) {
+                                q.AnswerVideoPath = new Uri(Path.Combine(Environment.CurrentDirectory, question.ItemArray[11].ToString()));
+                            } else {
+                                q.AnswerVideoPath = new Uri(question.ItemArray[11].ToString());
                             }
                         }
                     }
@@ -140,7 +157,21 @@ namespace Quiz.Support
             return info;
         }
 
-        public void AddOrUpdatePlayerInfo(int playerIndex, string playerName, int points) {
+        public bool CheckContinueRound() {
+            using (SqlConnection connection = new SqlConnection(_connectionString)) 
+            using (SqlDataAdapter adapter = new SqlDataAdapter(string.Format(GET_QUESTIONS_COMMAND, roundIndex + 1, 0), connection)) {
+                DataTable table = new DataTable();
+                adapter.Fill(table);
+
+                if (table.Rows.Count == 0) {
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+        }
+
+        public void AddOrUpdatePlayerInfo(int playerIndex, string playerName, double points) {
             if (playerIndex >= currentPlayersInfo.PlayersNames.Count) {
                 AddPlayer(playerName);
                 currentPlayersInfo.PlayersNames.Add(playerName);
@@ -183,19 +214,21 @@ namespace Quiz.Support
         public void UpdateCurrentRound(int value)
         {
             using (SqlConnection connection = new SqlConnection(_connectionString)) {
-                SqlCommand command = new SqlCommand(string.Format(SET_ROUND_ID_COMMAND, value));
+                connection.Open();
+
+                SqlCommand command = new SqlCommand(string.Format(SET_ROUND_ID_COMMAND, value), connection);
                 command.ExecuteNonQuery();
             }
 
             roundIndex = value;
         }
 
-        public void UpdatePoints(int playerIndex, int newPointsValue)
+        public void UpdatePoints(int playerIndex, double newPointsValue)
         {
             using (SqlConnection connection = new SqlConnection(_connectionString)) {
                 connection.Open();
 
-                SqlCommand command = new SqlCommand(string.Format(UPDATE_PLAYER_POINTS_COMMAND, newPointsValue, playerIndex), connection);
+                SqlCommand command = new SqlCommand(string.Format(UPDATE_PLAYER_POINTS_COMMAND, Math.Round(newPointsValue, 0), playerIndex), connection);
                 command.ExecuteNonQuery();
             }
         }

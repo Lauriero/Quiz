@@ -34,6 +34,8 @@ namespace Quiz.Support
         public event Action<ModuleStatus> OnModuleConnectionChange;
         public event Action<List<string>> OnNewPortNames;
 
+        private Thread watchDogThread;
+
         public ButtonModuleConnector() {
             modulePort = new SerialPort();
             modulePort.BaudRate = PORT_BAUD_RATE;
@@ -51,7 +53,7 @@ namespace Quiz.Support
 
             OnNewPortNames?.Invoke(portNames);
 
-            Thread watchDogThread = new Thread(WatchDog);
+            watchDogThread = new Thread(WatchDog);
             watchDogThread.Start();
         }
 
@@ -80,6 +82,11 @@ namespace Quiz.Support
         }
 
         public void AbortListener() {
+            isConnectorActive = false;
+        }
+
+        public void AbortAll() {
+            watchDogThread?.Abort();
             isConnectorActive = false;
         }
 

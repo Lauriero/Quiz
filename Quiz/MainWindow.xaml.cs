@@ -15,6 +15,8 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace Quiz
 {
@@ -29,7 +31,20 @@ namespace Quiz
 
         public ObservableCollection<Player> Players { get; set; }
         public ObservableCollection<string> SerialPorts { get; set; }
-        public int RoundNumber { get; set; }
+        public int RoundNumber {
+            get { return _roundNumber; }
+            set {
+                _roundNumber = value;
+                OnPropertyChanged("RoundNumber");
+            }
+        }
+        public string RightAnswer {
+            get { return _rightAnswer; }
+            set {
+                _rightAnswer = value;
+                OnPropertyChanged("RightAnswer");
+            }
+        }
         public double PlayerBarHeight {
             get { return _playerBarHeight; }
             set {
@@ -44,6 +59,14 @@ namespace Quiz
                 OnPropertyChanged("QuestionNumber");
             }
         }
+        public string MainWindowQuestion {
+            get { return _mainWindowQuestion; }
+            set {
+                _mainWindowQuestion = value;
+                OnPropertyChanged("MainWindowQuestion");
+            }
+        }
+
         public string QuestionText {
             get { return _questionString; }
             set {
@@ -96,6 +119,33 @@ namespace Quiz
             }
         }
 
+        public Player ActivePlayer { 
+            get { return _activePlayer; }
+            set {
+                _activePlayer = value;
+
+                if(value == null) {
+                    OnPropertyChanged("ActivePlayer");
+                    return;
+                }
+
+                if (value.Points == 0) {
+                    ActivePlayerPointsBarFontSize = 50;
+                } else {
+                    ActivePlayerPointsBarFontSize = 60;
+                }
+
+                OnPropertyChanged("ActivePlayer");
+            }
+        }
+        public int ActivePlayerPointsBarFontSize {
+            get { return _activePlayerPointsBarFontSize; }
+            set {
+                _activePlayerPointsBarFontSize = value;
+                OnPropertyChanged("ActivePlayerPointsBarFontSize");
+            }
+        }
+
         #endregion
 
         #region Colors
@@ -112,8 +162,8 @@ namespace Quiz
 
         private int playersCount = 0;
         private int registratingPlayerCounter = 0;
-        private int activePlayer = -1;
-        private int maxPoint = 20;
+        private int activePlayerIndex = -1;
+        private int maxPoint = 30;
 
         private bool isRegistrationActive = false;
         private bool isModuleConnect = false;
@@ -123,21 +173,32 @@ namespace Quiz
         private bool isPlayerAnswering = false;
         private bool isVideoPlay = false;
         private bool isVideoQuestion = false;
+        private bool isRightAnswerVideoPlay = false;
+        private bool isVideoRightAnswer = false;
+        private bool isAddPointsWindowOpened = false;
+        private bool isAddingPointNecessary = false;
     
         private double pointBarWidthStep = 0;
         private double pointBarsContainerWidth = 0;
         private double playersNameContainerHeight = 0;
 
         private double _playerBarHeight;
+        private int _roundNumber;
         private int _questionNumber;
         private int _questionNumberFontSize;
         private int _questionTextFontSize;
         private int _answerTimeFontSize;
+        private int _activePlayerPointsBarFontSize;
         private string _questionString;
+        private string _mainWindowQuestion;
         private string _questionAnswerTime;
+        private string _rightAnswer;
+        private Player _activePlayer;
         private Thickness _playerNameMargin;
         private TimeSpan _answersTime;
         private Timer _answerSecondsTimer;
+
+        private UIElement closedElement;
 
         private DataBaseWorker dbWorker;
         private ButtonModuleConnector buttonConnector;
@@ -146,6 +207,8 @@ namespace Quiz
 
         public MainWindow()
         {
+            ActivePlayer = new Player();
+
             RoundNumber = 1;
             QuestionNumberFontSize = 33;
             QuestionTextFontSize = 30;
@@ -189,6 +252,7 @@ namespace Quiz
             quizManager.OnPlayerButtonClicked += QuizManager_OnPlayerButtonClicked;
             quizManager.OnRightAnswer += QuizManager_OnRightAnswer;
             quizManager.OnWrongAnswer += QuizManager_OnWrongAnswer;
+            quizManager.OnRoundEnd += QuizManager_OnRoundEnd;
             quizManager.Init(dbWorker.GetQuestions(), buttonConnector);
 
             if (playersInfo.PlayersNames.Count == 0) {
@@ -204,6 +268,54 @@ namespace Quiz
             MediaBlock.LoadedBehavior = MediaState.Manual;
             MediaBlock.UnloadedBehavior = MediaState.Manual;
             MediaBlock.Volume = 0.5f;
+
+            RightAnswerMediaBlock.LoadedBehavior = MediaState.Manual;
+            RightAnswerMediaBlock.UnloadedBehavior = MediaState.Manual;
+            RightAnswerMediaBlock.Volume = 0.5f;
+
+            Sound.LoadedBehavior = MediaState.Manual;
+            Sound.UnloadedBehavior = MediaState.Manual;
+            Sound.Volume = 0.5f;
+
+            Sound.Stop();
+        }
+
+        private void QuizManager_OnRoundEnd()
+        {
+            double p1 = Players[0].Points;
+            double p2 = Players[1].Points;
+            double p3 = Players[2].Points;
+
+            if (!(p1 != p2 && p2 != p3 && p1 != p3)) {
+                MediaDockPanel.Visibility = Visibility.Collapsed;
+                quizManager.AddExtraQuestion();
+                quizManager.Next();
+                return;
+            }   
+
+            if (dbWorker.CheckContinueRound()) {
+
+                dbWorker.UpdateCurrentRound(RoundNumber + 1);
+                dbWorker.UpdateCurrentQuestion(0);
+
+                Thread thread = new Thread(() => {
+                    Process.Start(Path.Combine(Environment.CurrentDirectory, "Quiz.exe"));
+                });
+                thread.Start();
+
+                quizManager.StopQuiz();
+                registrationManager.StopManager();
+                buttonConnector.AbortAll();
+
+                this.Close();
+            } else {
+                MessageBox.Show("Игра окончена.");
+
+                quizManager.StopQuiz();
+                registrationManager.StopManager();
+                buttonConnector.AbortAll();
+                this.Close();
+            }
         }
 
         #region PlayersSupportMethods
@@ -217,8 +329,16 @@ namespace Quiz
                 AddPlayerBtn.Visibility = Visibility.Collapsed;
             }
 
+            if (playersCount == 0) {
+                Players.Add(new Player(string.Format(playerName, playersCount + 1), Color.FromRgb(79, 185, 159), playersCount, pointBarsContainerWidth / maxPoint));
+            } else if (playersCount == 1) {
+                Players.Add(new Player(string.Format(playerName, playersCount + 1), Color.FromRgb(242, 177, 52), playersCount, pointBarsContainerWidth / maxPoint));
+            } else if (playersCount == 2) {
+                Players.Add(new Player(string.Format(playerName, playersCount + 1), Color.FromRgb(237, 85, 89), playersCount, pointBarsContainerWidth / maxPoint));
+            }
+
             if (playersCount < defaultColors.Count) {
-                Players.Add(new Player(string.Format(playerName, playersCount + 1), defaultColors[playersCount], playersCount, pointBarsContainerWidth / maxPoint));
+                
             } else {
                 Players.Add(new Player(string.Format(playerName, playersCount + 1), Color.FromRgb(48, 59, 63), playersCount, pointBarsContainerWidth / maxPoint));
             }
@@ -247,20 +367,28 @@ namespace Quiz
         /// </summary>
         /// <param name="playerIndex">Index of player</param>
         /// <param name="points">Adding points</param>
-        private void AddPoints(int playerIndex, int points) {
+        private void AddPoints(int playerIndex, double points) {
             double newPointBarWidth = (Players[playerIndex].Points += points) * pointBarWidthStep;
+
+            DoubleAnimation animation = new DoubleAnimation();
 
             Application.Current.Dispatcher.BeginInvoke(new Action(() => {
                 Grid g = GetElementFromItemsControl<Grid>(PointBarsContainer, playerIndex, "PointBarGrid");
 
-                DoubleAnimation animation = new DoubleAnimation();
                 animation.From = g.Width;
                 animation.To = newPointBarWidth;
                 animation.AccelerationRatio = 0.6;
                 animation.Duration = TimeSpan.FromMilliseconds(200);
 
-                g.BeginAnimation(Grid.WidthProperty, animation);
+                g.BeginAnimation(WidthProperty, animation);
             }), DispatcherPriority.ApplicationIdle);
+
+            animation.From = RightPlayerPointsBar.Width;
+            animation.To = newPointBarWidth;
+            animation.AccelerationRatio = 0.6;
+            animation.Duration = TimeSpan.FromMilliseconds(200);
+
+            RightPlayerPointsBar.BeginAnimation(WidthProperty, animation);
         }
 
         #endregion
@@ -363,7 +491,34 @@ namespace Quiz
         /// </summary>
         private void QuizManager_OnWrongAnswer()
         {
-            Players[activePlayer].ChangeStatus(PlayerStatus.Registered);
+            if (Players.Where(p => !p.isAnswered).ToArray().Count() == 0) {
+                ActivePlayer = null;
+                isAddingPointNecessary = true;
+                AddPointsMenu.Visibility = Visibility.Visible;
+                ShowImage();
+
+                if (RightAnswerGrid.Visibility == Visibility.Visible) {
+                    closedElement = RightAnswerGrid;
+                    RightAnswerGrid.Visibility = Visibility.Hidden;
+                } else if (MediaDockPanel.Visibility == Visibility.Visible) {
+                    closedElement = MediaGrid;
+                    MediaDockPanel.Visibility = Visibility.Hidden;
+                } else if (MainSettingsGrid.Visibility == Visibility.Visible) {
+                    closedElement = MainSettingsGrid;
+                    MainSettingsGrid.Visibility = Visibility.Hidden;
+                }
+
+                isAddPointsWindowOpened = true;
+
+                quizManager.StopQuiz();
+
+                Players[activePlayerIndex].ChangeStatus(PlayerStatus.Registered);
+                isPlayerAnswering = false;
+                return;
+            }
+
+
+            Players[activePlayerIndex].ChangeStatus(PlayerStatus.Registered);
             isPlayerAnswering = false;
 
             ShowImage();
@@ -373,13 +528,17 @@ namespace Quiz
         /// Invoke when player give a right answer
         /// </summary>
         /// <param name="points"></param>
-        private void QuizManager_OnRightAnswer(int points)
+        private void QuizManager_OnRightAnswer(double points, bool isInvokeFromThis = false)
         {
-            Blacker.Height = (SystemParameters.PrimaryScreenHeight - 30) - (playersCount - 1 - activePlayer) * (PlayerBarHeight + 2 * PlayerNameMargin.Top) - PlayerNameMargin.Top - PlayerBarHeight;
+            if (!isInvokeFromThis) {
+                ActivePlayer = Players[activePlayerIndex];
+            }
+            
+            ShowBlacker();
+            RightAnswerGrid.Visibility = Visibility.Visible;
 
-
-            AddPoints(activePlayer, points);
-            Players[activePlayer].ChangeStatus(PlayerStatus.Registered);
+            AddPoints(activePlayerIndex, points);
+            Players[activePlayerIndex].ChangeStatus(PlayerStatus.Registered);
 
             foreach (Player p in Players) {
                 p.AnswerTime = "";
@@ -387,7 +546,7 @@ namespace Quiz
             }
             isPlayerAnswering = false;
 
-            dbWorker.UpdatePoints(activePlayer, Players[activePlayer].Points);
+            dbWorker.UpdatePoints(activePlayerIndex, Players[activePlayerIndex].Points);
             dbWorker.UpdateCurrentQuestion(QuestionNumber);
         }
 
@@ -395,12 +554,21 @@ namespace Quiz
         /// Invoke when player's button clicked
         /// </summary>
         /// <param name="buttonIndex">Index of clicked button</param>
-        private void QuizManager_OnPlayerButtonClicked(int buttonIndex, int points)
+        private void QuizManager_OnPlayerButtonClicked(int buttonIndex, double points)
         {
+            MediaBlock.Pause();
+            isVideoPlay = false;
+
+            Sound.Position = TimeSpan.FromMilliseconds(0);
+            Sound.Play();
+
             if (Players.Where(p => p.ButtonIndex == buttonIndex).ToArray()[0].isAnswered) {
-                quizManager.WrongAnswerClick();
-                quizManager.StartButtonListener();
-                StartTimer();
+                if (Players.Where(p => !p.isAnswered).ToArray().Count() == 0) {
+                    return;
+                } else {
+                    quizManager.WrongPlayer(StartTimer);
+                }
+
                 return;
             }
 
@@ -409,9 +577,9 @@ namespace Quiz
             isTimerStarted = false;
             isPlayerAnswering = true;
 
-            activePlayer = Players.Where(p => p.ButtonIndex == buttonIndex).ToArray()[0].PlayerIndex;
-            Players[activePlayer].ChangeStatus(PlayerStatus.Answering, points, (long)_answersTime.TotalMilliseconds);
-            Players[activePlayer].isAnswered = true;
+            activePlayerIndex = Players.Where(p => p.ButtonIndex == buttonIndex).ToArray()[0].PlayerIndex;
+            Players[activePlayerIndex].ChangeStatus(PlayerStatus.Answering, points, (long)_answersTime.TotalMilliseconds);
+            Players[activePlayerIndex].isAnswered = true;
         }
 
         /// <summary>
@@ -423,13 +591,13 @@ namespace Quiz
         /// <param name="kind">Type of question</param>
         /// <param name="answers">List of answers</param>
         /// <param name="mediaPath">Path to video or picture for question</param>
-        private void QuizManager_OnNewQuestion(int id, string text, int secondsToAnswer, QuestionKind kind, List<Answer> answers, Uri mediaPath)
+        private void QuizManager_OnNewQuestion(int id, string text, string rightAnswer, int secondsToAnswer, QuestionKind kind, List<Answer> answers, Uri mediaPath, MediaAnswer mediaAnswer)
         {
             switch (kind) {
                 case QuestionKind.WithVideo:
                     {
                         ShowBlacker();
-                        QuestionImage.Visibility = Visibility.Collapsed;
+                        ImageAndVideoGrid.Children[0].Visibility = Visibility.Collapsed;
                         MediaGrid.Visibility = Visibility.Visible;
                         MediaBorder.Padding = new Thickness(200, 30, 200, 0);
                         MediaBlock.Source = mediaPath;
@@ -443,20 +611,82 @@ namespace Quiz
                     {
                         ShowBlacker();
                         MediaBlock.Stop();
-                        QuestionImage.Source = new BitmapImage(mediaPath);
+
+                        ImageAndVideoGrid.Children.RemoveAt(0);
+
+                        Image image = new Image();
+                        BitmapImage src = new BitmapImage();
+                        src.BeginInit();
+                        src.UriSource = mediaPath;
+                        src.EndInit();
+                        image.Source = src;
+                        image.Stretch = Stretch.Uniform;
+
+                        ImageAndVideoGrid.Children.Insert(0, image);
+
+                       
                         MediaGrid.Visibility = Visibility.Visible;
-                        MediaBlock.Visibility = Visibility.Hidden;
-                        PointBarsContainer.Visibility = Visibility.Visible;
+                        MediaBlock.Visibility = Visibility.Collapsed;
                         isVideoQuestion = false;
+
+
                         break;
                     }
                 case QuestionKind.Simple:
                     {
                         HideBlacker();
                         MediaBlock.Stop();
-                        MediaBlock.Visibility = Visibility.Hidden;
-                        PointBarsContainer.Visibility = Visibility.Visible;
+                        MediaDockPanel.Visibility = Visibility.Collapsed;
+                        MediaBlock.Visibility = Visibility.Collapsed;
                         isVideoQuestion = false;
+                        break;
+                    }
+            }
+
+            switch (mediaAnswer.Kind) {
+                case AnswerKind.WithImage:
+                    {
+                        RightAnswerMediaGrid.Visibility = Visibility.Visible;
+                        RightAnswerMediaBlock.Stop();
+                        RightAnswerMediaBlock.Visibility = Visibility.Collapsed;
+
+                        RightMediaInnerGrid.Children.RemoveAt(0);
+
+                        Image image = new Image();
+                        BitmapImage src = new BitmapImage();
+                        src.BeginInit();
+                        src.UriSource = mediaAnswer.AnswerImagePath;
+                        src.EndInit();
+                        image.Source = src;
+                        image.Stretch = Stretch.Uniform;
+
+                        RightMediaInnerGrid.Children.Insert(0, image);
+
+                        if (src.Height > SystemParameters.PrimaryScreenHeight / 2.4) {
+                            (RightMediaInnerGrid.Children[0] as Image).Height = SystemParameters.PrimaryScreenHeight / 2.4;
+                        }
+
+
+                        RightAnswerDockPanel.Margin = new Thickness(0, 20, 0, 0);
+
+                        break;
+                    }
+                case AnswerKind.WithVideo:
+                    {
+                        RightAnswerMediaGrid.Visibility = Visibility.Visible;
+                        RightAnswerMediaBlock.Visibility = Visibility.Visible;
+                        RightMediaInnerGrid.Children[0].Visibility = Visibility.Collapsed;
+                        RightAnswerMediaBlock.Source = mediaAnswer.AnswerVideoPath;
+                        RightAnswerMediaBlock.Play();
+
+                        RightAnswerDockPanel.Margin = new Thickness(0, 20, 0, 0);
+
+                        break;
+                    }
+                case AnswerKind.Simple:
+                    {
+                        RightAnswerMediaGrid.Visibility = Visibility.Collapsed;
+                        RightAnswerDockPanel.Margin = new Thickness(0, 100, 0, 0);
                         break;
                     }
             }
@@ -472,11 +702,25 @@ namespace Quiz
                 QuestionTextBlock.VerticalAlignment = VerticalAlignment.Top;
                 text = text.Substring(0, 182) + "...";
             }
+
             QuestionText = text;
+
+            Regex reg = new Regex(@"\s{2,}");
+            text = reg.Replace(text, " ");
+
+            MainWindowQuestion = text;
             AnswerTimerText = secondsToAnswer.ToString();
             _answersTime = TimeSpan.FromSeconds(secondsToAnswer);
 
             QuestionNumber = id;
+
+            RightAnswer = rightAnswer;
+            RightAnswerGrid.Visibility = Visibility.Hidden;
+            RightAnswerMediaBlock.Stop();
+
+            MediaGrid.Visibility = Visibility.Visible;
+            MediaDockPanel.Visibility = Visibility.Visible;
+            ShowImage();
         }
 
         #endregion
@@ -599,6 +843,10 @@ namespace Quiz
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
+            quizManager.StopQuiz();
+            registrationManager.StopManager();
+            buttonConnector.AbortAll();
+
             this.Close();
         }
 
@@ -626,7 +874,7 @@ namespace Quiz
             settingsHeightAnimation.AccelerationRatio = 0.3;
 
             HideBlacker();
-            SettingsBorder.BeginAnimation(HeightProperty, settingsHeightAnimation);
+            SettingsBorder.BeginAnimation(WidthProperty, settingsHeightAnimation);
 
             registrationManager.StopManager();
 
@@ -653,6 +901,9 @@ namespace Quiz
                 quizManager.StartQuiz();
                 isQuizStarted = true;
             }
+
+            this.WindowStyle = WindowStyle.None;
+            this.WindowState = WindowState.Maximized;
         } 
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
@@ -697,6 +948,16 @@ namespace Quiz
 
                             isVideoPlay = !isVideoPlay;
                         }
+
+                        if (isVideoRightAnswer) {
+                            if (isRightAnswerVideoPlay) {
+                                RightAnswerMediaBlock.Pause();
+                            } else {
+                                RightAnswerMediaBlock.Play();
+                            }
+
+                            isRightAnswerVideoPlay = !isRightAnswerVideoPlay;
+                        }
                         break;
                     }
                 case Key.R:
@@ -706,11 +967,69 @@ namespace Quiz
                             MediaBlock.Play();
                             isVideoPlay = true;
                         }
+
+                        if (isVideoRightAnswer) {
+                            MediaBlock.Stop();
+                            MediaBlock.Play();
+                            isRightAnswerVideoPlay = true;
+                        } 
                         break;
                     }
             }
 
             if (!isQuizStarted) { return; }
+
+            if (e.Key == Key.Enter) {
+                if (isAddPointsWindowOpened) {
+                    if (ActivePlayer != null && ActivePlayer.PlayerIndex >= 0) {
+                        if (quizManager.AddedPoints()) {
+                            HideBlacker();
+                        } else {
+                            ShowBlacker();
+                        }
+                        
+
+                        isAddPointsWindowOpened = false;
+                        
+                        AddPointsMenu.Visibility = Visibility.Collapsed;
+
+                        if (isAddingPointNecessary) {
+                            AddPoints(ActivePlayer.PlayerIndex, Convert.ToDouble(AddingPointsTextBlock.Text));
+                            QuizManager_OnRightAnswer(0, true);
+                            MediaGrid.Visibility = Visibility.Hidden;
+                            RightAnswerGrid.Visibility = Visibility.Visible;
+                            isAddingPointNecessary = false;
+                            return;
+                        }
+
+                        HideBlacker();
+                        AddPoints(ActivePlayer.PlayerIndex, Convert.ToDouble(AddingPointsTextBlock.Text));
+
+                        isAddingPointNecessary = false;
+                        closedElement.Visibility = Visibility.Visible;
+                    }
+                }
+            }
+
+            if (e.Key == Key.Escape) {
+                if (isAddPointsWindowOpened) {
+                    if (!isAddingPointNecessary) {
+                        AddPointsMenu.Visibility = Visibility.Hidden;
+                        closedElement.Visibility = Visibility.Visible;
+                        HideBlacker();
+                    }
+                }
+            }
+
+            if (isAddPointsWindowOpened) {
+                if (Char.IsDigit((char)KeyInterop.VirtualKeyFromKey(e.Key)) && e.Key != Key.Back || e.Key == Key.Space) {
+                    if ((int)(((char)KeyInterop.VirtualKeyFromKey(e.Key)) - '0') > Players.Count || (int)(((char)KeyInterop.VirtualKeyFromKey(e.Key)) - '0') == 0) {
+                        return;
+                    }
+
+                    ActivePlayer = Players[(int)(((char)KeyInterop.VirtualKeyFromKey(e.Key)) - '0') - 1];
+                } else { return; }
+            }
 
             switch (e.Key) {
                 case Key.Y:
@@ -725,13 +1044,36 @@ namespace Quiz
                     }
                 case Key.S:
                     {
-                        quizManager.StartButtonListener();
-                        StartTimer();
+                        quizManager.StartButtonListener(StartTimer);
                         break;
                     }
-                case Key.A:
+                case Key.C:
                     {
-                        quizManager.Click();
+                        quizManager.Next();
+                        break;
+                    }
+                case Key.Q:
+                    {
+                        ShowBlacker();
+                        isAddingPointNecessary = false;
+                        AddPointsMenu.Visibility = Visibility.Visible;
+                        ActivePlayer = null;
+
+                        if (RightAnswerGrid.Visibility == Visibility.Visible) {
+                            closedElement = RightAnswerGrid;
+                            RightAnswerGrid.Visibility = Visibility.Hidden;
+                        } else if (MediaGrid.Visibility == Visibility.Visible) {
+                            closedElement = MediaGrid;
+                            MediaGrid.Visibility = Visibility.Hidden;
+                        } else if (MainSettingsGrid.Visibility == Visibility.Visible) {
+                            closedElement = MainSettingsGrid;
+                            MainSettingsGrid.Visibility = Visibility.Hidden;
+                        }
+
+                        isAddPointsWindowOpened = true;
+
+                        quizManager.StopQuiz();
+
                         break;
                     }
             }
